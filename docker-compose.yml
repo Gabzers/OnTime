@@ -1,0 +1,56 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ontimecrm_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ontimecrm}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./OnTimeCRM_Backend
+      dockerfile: Dockerfile
+    container_name: ontimecrm_api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-ontimecrm};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: OnTimeCRM
+      Jwt__Audience: OnTimeCRM-Frontend
+      Jwt__ExpirationMinutes: "480"
+      Cors__AllowedOrigins__0: "http://localhost"
+      Cors__AllowedOrigins__1: "http://localhost:80"
+      AdminBootstrap__Email: ${ADMIN_EMAIL:-admin@ontimecrm.io}
+      AdminBootstrap__Password: ${ADMIN_PASSWORD}
+      AdminBootstrap__FullName: "Administrador"
+      AdminBootstrap__CompanyName: "OnTimeCRM Demo"
+      AdminBootstrap__BrandName: "Stand Demo"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./OnTimeCRM_Frontend
+      dockerfile: Dockerfile
+    container_name: ontimecrm_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
