@@ -13,7 +13,7 @@ A CRM for car-dealership salespeople, built around one core promise: **never mis
 
 ## What is this?
 
-OnTimeCRM is a multi-tenant SaaS CRM purpose-built for car dealerships: managing leads through a sales pipeline, generating proposals, recording sales, and — its differentiating feature — **automatically reminding salespeople to follow up** at the right moments (after a scheduled visit, a test drive, days after a sale). Built as a personal/academic full-stack project to apply Clean Architecture, multi-tenant access control, and integration-test-driven development end to end.
+OnTimeCRM is a multi-tenant SaaS CRM purpose-built for car dealerships: managing leads through a sales pipeline, generating proposals, recording sales, and — its differentiating feature — **automatically reminding salespeople to follow up** at the right moments (after a scheduled visit, a test drive, days after a sale). Built as a personal/professional full-stack project to apply Clean Architecture, multi-tenant access control, and integration-test-driven development end to end.
 
 The system is split into three repositories:
 
@@ -106,4 +106,4 @@ See each sub-repo's README for details on testing, configuration, and architectu
 
 ---
 
-*Personal/academic project by [Gabriel Proença](https://github.com/Gabzers) — Full Stack Developer (.NET / C# / SQL Server) and MSc Software Engineering student at ISEP. Built to apply Clean Architecture, multi-tenant access control, and integration-test-driven development end to end.*
+*Personal/professional project by [Gabriel Proença](https://github.com/Gabzers) — Full Stack Developer (.NET / C# / SQL Server) and MSc Software Engineering student at ISEP. Built to apply Clean Architecture, multi-tenant access control, and integration-test-driven development end to end.*
