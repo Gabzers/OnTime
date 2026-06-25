@@ -13,36 +13,42 @@ Hub: [[OnTimeCRM]] · Roadmap: [[ROADMAP]] (Phase 0). Concrete bugs found by rea
 ### 3. ~~NotificationStatus labels & colors swapped~~ ✅ fixed T7 (2026-06-06)
 Fixed in `I18nController` (pt-PT + en-US), `i18nFallback.ts`, `EnumTag.NotificationStatusTag` colors, `NotificationDropdown.statusColor`.
 
-### 4. ~~Theme flash (FOUC) on first load in dark mode~~ ✅ fixed T10 (2026-06-06)
-Switching screens while in dark mode flashes white, then settles to dark on first paint of a
-screen. The theme is applied after React hydrates instead of before first paint.
-**Fix:** apply the persisted `themeStore.isDark` synchronously before render — set the Ant
-algorithm + a `dark` class on `<html>` from an inline script / pre-hydration read of
-`localStorage('ontimecrm-theme')`, so the initial paint is already dark.
+### 4. ~~Theme flash (FOUC) on first load in dark mode~~ ✅ fixed T10 (2026-06-24)
+Switching screens while in dark mode used to flash white, then settle to dark on first paint of a
+screen. The theme was applied after React hydrated instead of before first paint.
+**Fix:** read the persisted `themeStore.isDark` synchronously before render, sync the `dark` class on
+`<html>`, and keep that state aligned during rehydrate so the initial paint stays dark.
 
-### 5. ~~Raw i18n keys rendered (missing keys)~~ ✅ fixed T12 (2026-06-06)
-- Proposal detail shows a button literally labelled `ACTION.PROPOSAL.LOST`.
-- Convert-to-sale shows `MSG.CONVERT.SOLD_AT_HINT`.
-The component uses keys that don't exist in `/api/i18n` (the hint key is defined as
-`HINT.PROPOSAL.SOLD_AT`, not `MSG.CONVERT.SOLD_AT_HINT`). **Fix:** add the missing keys to PtPT/EnUS
-+ fallback, or point the component at the existing key. See [[I18N]].
+### 5. ~~Raw i18n keys rendered (missing keys)~~ ✅ fixed T12 (2026-06-24)
+- Proposal detail showed a button literally labelled `ACTION.PROPOSAL.LOST`.
+- Convert-to-sale showed `MSG.CONVERT.SOLD_AT_HINT`.
+The backend i18n payload is still partial in some environments, so the frontend now merges it over
+`PT_PT_FALLBACK` before rendering. This prevents raw keys from leaking even when `/api/i18n`
+doesn't include every string. See [[I18N]].
 
-### 6. ~~Back from proposal detail returns to the wrong tab~~ ✅ fixed T13 (2026-06-06)
-Opening a proposal detail then "back" lands on the **"Informação"** tab instead of
-**"Propostas (1)"**. **Fix:** preserve the originating tab (route state / query param) so back
-returns to the proposals tab on the client detail page.
+### 6. ~~Back from proposal detail returns to the wrong tab~~ ✅ fixed T13 (2026-06-24)
+Opening a proposal detail then "back" used to land on the **"Informação"** tab instead of
+**"Propostas (1)"**. **Fix:** keep the client tab in controlled state and restore it from the
+navigation state when returning from proposal detail.
 
-### 7. Encoding mojibake — `ç`/`ã`/`—` render as `Ã¡` / `â€"`
-e.g. "Configuração" → "ConfiguraÃ§Ã£o", "Hora da notificação", em-dash → "â€"". The **source is
-correct UTF-8** (verified) — this is a runtime/compile encoding issue. Most likely the i18n
-`.cs` source compiled as Windows-1252 (UTF-8 **without BOM** on a Windows build), so the string
-literals are already corrupt in the assembly. **Fix:** save source files with non-ASCII as UTF-8
-**with BOM** (or enforce via `.editorconfig` `charset = utf-8-bom`); verify the `/api/i18n`
-response is `application/json; charset=utf-8`. See [[I18N]].
+### 7. ~~Encoding mojibake — `ç`/`ã`/`—` render as `Ã¡` / `â€"`~~ fixed 2026-06-24 (found the real instance)
+First pass: checked `curl http://localhost:8080/api/i18n?locale=pt-PT` against the running
+container — correctly encoded UTF-8, no BOM issue, not the `/api/i18n` payload at all.
+Second pass (live browser testing on `/notification-settings`): the user actually saw `â€"` in
+the rendered "Hora da notificação" column. Root cause found by grepping for `â€` across the repo —
+**`NotificationSettingsPage.tsx` had literal corrupted bytes committed to source**: the fallback
+string was `'â€”'` (mojibake) instead of `'—'` (proper em dash), plus `â”€` mojibake in several
+section-divider comments. This is a genuinely corrupted source file, unrelated to BOM/Roslyn/i18n —
+fixed by rewriting the file as proper UTF-8. No other file in the repo had this pattern (verified
+via repo-wide grep for `â€|â”€`).
 
-### 8. Vehicles screen — status + active toggle (enhancement)
-Needs a status dot per model (grey=unconfigured, red=inactive, green=active+configured) and an
+### 8. ~~Vehicles screen — status + active toggle~~ ✅ fixed T15 (2026-06-06)
+Added a status dot per model (grey=unconfigured, red=inactive, green=active+configured) and an
 active/inactive toggle. Full spec in [[VEHICLES]].
+
+### 9. New-client vehicle picker behavior ✅ fixed 2026-06-24
+`NewClientPage` now locks the brand selector when the user has exactly one selected vehicle brand,
+allows choosing among selected brands when there are multiple, and only shows active models.
 
 ## 🟠 i18n rule violations (hardcoded pt-PT) ✅ fixed T9 (2026-06-06)
 - `NotificationDropdown.tsx`: `title="Adiar 1h"` → `t['ACTION.NOTIFICATION.SNOOZE_1H']`; `"Ver todas"` → `t['ACTION.VIEW_ALL']`

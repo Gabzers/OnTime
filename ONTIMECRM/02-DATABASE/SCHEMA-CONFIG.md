@@ -33,12 +33,14 @@ Hub: [[OnTimeCRM]] · Features: [[GOALS-PERMISSIONS]] · [[I18N]].
 
 > Not seeded → empty in the UI until configured. See [[VEHICLES]].
 
-## user_vehicle_brands *(planned — see [[USER-BRANDS]])*
+## user_vehicle_brands ✅ done (2026-06-06) — see [[USER-BRANDS]]
 | column | type | notes |
 |--------|------|-------|
-| user_id | UUID FK users | |
-| vehicle_brand_id | UUID FK vehicle_brands | |
-| PK (user_id, vehicle_brand_id) | | many-to-many: brands the user sells |
+| id | UUID PK | own surrogate key (BaseEntity), not composite |
+| user_id | UUID FK users | cascade delete |
+| vehicle_brand_id | UUID FK vehicle_brands | cascade delete |
+| created_at / updated_at / is_active / notes | — | inherited from `BaseEntity` |
+| unique index (user_id, vehicle_brand_id) | | many-to-many: brands the user sells. Empty for a user = no filter = all brands. |
 
 ## user_goals
 | column | type | notes |
@@ -46,8 +48,10 @@ Hub: [[OnTimeCRM]] · Features: [[GOALS-PERMISSIONS]] · [[I18N]].
 | id | UUID PK | |
 | user_id | UUID FK | |
 | metric_type | INT | 0=NewClients 1=Sales 2=Proposals 3=ConversionRate |
-| period | INT | 0=Daily 1=Weekly 2=Monthly |
+| period | INT | 0=Daily 1=Weekly 2=Monthly 3=Annual |
 | target_value | NUMERIC NOT NULL | |
+| start_date, end_date | TIMESTAMPTZ | `end_date` nullable — null means "end of `period`'s own window", computed at read time. Frontend (2026-06-25) no longer collects an explicit end date at all; only `start_date`, defaulted to the start of the chosen `period` (was "today", the root cause of a progress-undercounting bug). |
+| show_on_dashboard | BOOL DEFAULT FALSE | pins the goal to the Dashboard's "Os Meus Objetivos" widget |
 | is_active | BOOL DEFAULT TRUE | soft delete |
 
 ## menu_item_permissions
@@ -55,9 +59,23 @@ Hub: [[OnTimeCRM]] · Features: [[GOALS-PERMISSIONS]] · [[I18N]].
 |--------|------|-------|
 | id | UUID PK | |
 | role | INT | 0=Salesperson 1=Manager |
-| route_key | TEXT | e.g. "/clients", "/brands", "/admin" |
+| route_key | TEXT | e.g. "/clients", "/brands" — **never "/admin"** (2026-06-25: cross-tenant platform-admin access is a fixed role==2 constant, not a per-company configurable permission; a one-time startup cleanup deletes any pre-existing "/admin" row) |
 | can_view, can_create, can_edit, can_delete | BOOL | all DEFAULT TRUE |
 | UNIQUE(role, route_key) | | |
+
+## error_logs *(added 2026-06-25)* — see [[SECURITY]]
+| column | type | notes |
+|--------|------|-------|
+| id | UUID PK | |
+| status_code | INT | HTTP status returned (400/403/404/409/500/...) |
+| error_code | TEXT | `ApiErrorCatalog` code, or "CONFLICT"/"INTERNAL_ERROR" for the two non-`ApiException` paths |
+| message | TEXT(1000) | |
+| details | TEXT(2000) nullable | full exception `.ToString()` for unhandled 500s; null otherwise |
+| path, method, trace_id | TEXT | from the originating `HttpContext` |
+| user_id | UUID nullable | no FK — must survive the user being deleted; null for unauthenticated requests |
+| index (created_at), index (user_id) | | |
+Written once per error by `ErrorHandlingMiddleware` (every `ApiException`, DB conflict, and
+unhandled exception) — there is no other write path. `GET /api/admin/error-logs` (AdminOnly) reads it.
 
 ## translation_entries
 | column | type | notes |

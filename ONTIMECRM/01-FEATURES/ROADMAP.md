@@ -12,26 +12,23 @@ integration, and the i18n system.
 
 ---
 
-## Phase 0 — Stabilize the frontend (NOW)
+## Phase 0 — Stabilize the frontend ✅ done (2026-06-06)
 
-Backend is solid; the frontend has concrete bugs. Fix the house first. Full list in [[FRONTEND-ISSUES]].
-
-- [ ] Snooze sends `snoozeUntil`; API expects `snoozedUntil` → snooze is broken
-- [ ] `NotificationStatus` i18n labels swapped (2↔3) in [[I18N]]
-- [ ] `NotificationsPage` reads `n.dueAt`; DTO field is `scheduledFor`
-- [ ] Hardcoded pt-PT strings (NotificationDropdown, axios 403) violate [[CONVENTIONS]]
-- [ ] `brandColor` not typed on `LoginResponseDto`
-- [ ] **Trial lockout** (backend): PendingActivation users blocked even from GET.
-
-→ Blocks everything else. Full bug/debt catalog in [[KNOWN-ISSUES]]; deploy-gating infra in [[BEFORE-DEPLOY]].
+All T1–T15 tasks complete (see [[AI-TASK-PLAN]] for the full TDD log). 128 backend + 15 frontend
+tests green. Highlights: snooze field fix, i18n label swap fix, trial lockout fix, hardcoded
+strings removed, FOUC fix, missing i18n keys, proposal-detail back-nav, proposal vehicle
+requirement, vehicle status dot/toggle. Full bug/debt catalog in [[KNOWN-ISSUES]]; deploy-gating
+infra in [[BEFORE-DEPLOY]].
 
 ---
 
-## Phase 1 — Close MVP gaps
+## Phase 1 — Close MVP gaps (NOW)
 
+- [x] **F1 — User Brands filter** ✅ 2026-06-06. See [[USER-BRANDS]].
 - [ ] **Email verification** flow (post-registration). See [[SCHEMA-AUTH]].
-- [ ] Audit the implemented Goals/Friends/Permissions pages end-to-end (APIs exist; verify wiring). See [[GOALS-PERMISSIONS]], [[FRIENDS]].
+- [x] Audit the implemented Goals/Friends/Permissions pages end-to-end ✅ 2026-06-25 (full Chrome sweep + test-quality audit — see [[STATUS]]). Found and fixed: Goals date-window bug, Friends email/name-swap bug, the cross-tenant Admin-panel authz hole. See [[GOALS-PERMISSIONS]], [[FRIENDS]], [[SECURITY]].
 - [ ] Confirm dashboard performance target (<500ms). See [[DASHBOARD]].
+- [ ] Data-layer reconciliation (dead/drifted `fn_*` functions). See [[2026-05-30-data-layer]].
 
 ---
 
@@ -47,7 +44,9 @@ Backend is solid; the frontend has concrete bugs. Fix the house first. Full list
 
 ## Phase 3 — i18n system rebuild
 
-Currently translations are hardcoded in `I18nController.cs`; `TranslationEntry` is dead. See [[I18N]].
+Translations are hardcoded in `I18nController.cs` (pt-PT + en-US, both now genuinely complete —
+2026-06-25, see [[I18N]]); `TranslationEntry` is dead. Remaining work here is purely the
+architecture decision below, not missing/broken translations.
 
 - [ ] Decide: keep hardcoded dictionaries, or move to DB (`translation_entries` + `translation_locales`)?
 - [ ] Missing-key detection

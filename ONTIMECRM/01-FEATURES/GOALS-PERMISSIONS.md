@@ -8,24 +8,37 @@ Both are **implemented** (controller + service + DB). Status: [[STATUS]].
 
 ## Goals (UserGoal) — implemented
 
-Personal performance targets, not shared. Progress computed live from dashboard KPIs (`UserGoalService` calls `ISaleService.GetDashboardAsync`).
+Personal performance targets, not shared. **Progress is computed from the goal's own date
+range** (`UserGoalService.ComputeCurrentValueAsync`, rewritten 2026-06-25) — counts
+sales/proposals/new-clients directly from the DB for `[StartDate, EndDate ?? PeriodEnd)`, never
+a shared "this calendar month" snapshot. This matters: a Daily/Weekly/Annual goal with the old
+implementation always showed the same number as a Monthly one, because every period reused
+`dashboard.SalesThisMonth` etc.
 
 - `MetricType`: NewClients=0, Sales=1, Proposals=2, ConversionRate=3
-- `Period`: Daily=0, Weekly=1, Monthly=2
-- `TargetValue`, `StartDate`, `EndDate?`
+- `Period`: Daily=0, Weekly=1, Monthly=2, **Annual=3** (added 2026-06-25)
+- `TargetValue`, `StartDate`, `EndDate?` (backend-only now — see below), `ShowOnDashboard`
+  (pins the goal's progress bar to the Dashboard home screen; see `DashboardPage.tsx`)
+- **Frontend no longer collects `EndDate` at all** (2026-06-25) — the create/edit form only asks
+  for `StartDate`, defaulted to the start of the chosen `Period` (`startOfPeriod()` in
+  `GoalsPage.tsx`). Previously defaulted to "today", so a Monthly goal created mid-month
+  silently excluded every sale from earlier that month. `EndDate` stays in the API/DB purely as
+  an internal override hook (always null from the UI); `ComputeCurrentValueAsync` falls back to
+  `PeriodEnd(period, start)` whenever it's null, which is now always.
 - Delete = soft delete (`IsActive=false`). Ownership enforced (`AUTH_FORBIDDEN` if not owner).
 
-Progress mapping (current value vs target):
-- Sales → `dashboard.SalesThisMonth`
-- Proposals → `dashboard.ProposalsThisMonth`
-- NewClients → `dashboard.ActiveClients`
-- ConversionRate → `dashboard.ConversionRate`
+Progress per metric (all scoped to the goal's own window, see above):
+- Sales → count of `Sale` rows with `SoldAt` in range
+- Proposals → count of `Proposal` rows with `ProposalDate` in range
+- NewClients → count of `Client` rows with `CreatedAt` in range (was, incorrectly, lifetime
+  `dashboard.ActiveClients` before the rewrite)
+- ConversionRate → sales-in-range / proposals-in-range × 100, 0 if no proposals in range
 
 Endpoints (scoped to JWT userId):
 ```
-GET    /api/goals          list with live progress
+GET    /api/goals          list with live, period-scoped progress
 POST   /api/goals          create
-PUT    /api/goals/{id}     update target/dates
+PUT    /api/goals/{id}     update target/dates/ShowOnDashboard
 DELETE /api/goals/{id}     soft delete
 ```
 
@@ -37,16 +50,22 @@ UI-level permissions per role per route. **API auth is still enforced server-sid
 
 - Seeded on first call (`EnsureSeedAsync`):
   - Manager (1): all flags true on all routes
-  - Salesperson (0): `/brands`, `/admin`, `/access-control` → all false; others true
+  - Salesperson (0): `/brands`, `/access-control` → all false; others true
   - **Admin (2): full access computed in-memory, never stored**
-- Routes seeded: `/dashboard /clients /proposals /sales /notifications /stages /vehicles /goals /friends /brands /admin /access-control`
+- Routes seeded: `/dashboard /clients /proposals /sales /notifications /stages /vehicles /goals /friends /brands /access-control`
+- **`/admin` is deliberately NOT in this list** (2026-06-25) — it used to be, which meant a
+  Manager's own per-company permission screen had a toggle implying cross-tenant platform-admin
+  access was something a company could grant itself. Fixed alongside the `AdminOnly` policy fix
+  — see [[SECURITY]]. A startup cleanup (`DatabaseInitializer`) deletes any pre-existing
+  `/admin` row left over from before this change.
 
-> ⚠️ Reality vs intent: the entity has 4 flags (`CanView/CanCreate/CanEdit/CanDelete`), but the **API exposes only 2** (`CanRead`, `CanEdit`). On update, `CanEdit` is copied into Create+Edit+Delete. The DTO is `MenuPermissionDto(Id, Role, RouteKey, CanView, CanEdit)`.
+All 4 flags (`CanView/CanCreate/CanEdit/CanDelete`) are independent end-to-end — fixed T5
+(2026-06-06), `MenuPermissionDto`/`UpdateMenuPermissionRequest` both expose all 4.
 
 Endpoints (manager-only):
 ```
 GET /api/permissions?role={int}     get permissions for a role
-PUT /api/permissions/{role}         body: UpdateMenuPermissionRequest[] (RouteKey, CanRead, CanEdit)
+PUT /api/permissions/{role}         body: UpdateMenuPermissionRequest[] (RouteKey, CanView, CanCreate, CanEdit, CanDelete)
 ```
 
 Frontend `usePermissions` hook drives nav visibility.

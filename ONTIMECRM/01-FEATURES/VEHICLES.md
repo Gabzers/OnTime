@@ -25,14 +25,20 @@ VehicleBrand → VehicleModel → VehicleModelVersion
 > the versions endpoint and colour pickers come back empty (see [[KNOWN-ISSUES]]). Models need
 > configuration before they're "ready" to sell.
 
-## Requested improvements (reported June 2026)
-- **Status indicator on the Vehicles screen** per model:
-  - 🔘 grey = missing configuration (no version/colours/price/fuel)
-  - 🔴 red = inactive (`IsActive=false`)
+## Status indicator + active toggle ✅ done (T15, 2026-06-06)
+- **Status dot** per model on the Vehicles screen, driven by `getVehicleStatusColor()` (`OnTimeCRM_Frontend/src/utils/vehicleStatus.ts`):
+  - 🔘 grey = not configured (`IsConfigured=false`)
+  - 🔴 red = configured but inactive (`IsActive=false`)
   - 🟢 green = active **and** configured
-- **Active/inactive toggle per model** on the Vehicles screen (manager controls which models are sellable). Needs a `PATCH /api/vehicles/models/{id}/active` (mirror the brand one) + `VehicleModel.IsActive` already exists.
-- **Define "configured"**: at least one version with ≥1 exterior colour (decide the exact rule and document it here when implemented).
+- **"Configured" rule** (implemented in `VehicleRepository.GetModelsAsync`): at least one `VehicleModelVersion` with a non-empty `ExternalColors` array.
+- **Active/inactive toggle**: `Switch` in the Vehicles table (managers only) → `PATCH /api/vehicles/models/{id}/active` (`SetVehicleModelActiveRequest { IsActive }`, mirrors `BrandsController.SetActive`). `VehicleModel.IsActive` comes from `BaseEntity` (default `true`) — no migration needed.
+- `VehicleModelListDto` / `VehicleModelDto` now both expose `IsActive` and (list only) `IsConfigured`.
+- `GET /api/vehicles/models/{id}` is available for the proposal editor to hydrate existing vehicle rows before editing.
+- `NewClientPage` uses the user's selected vehicle brands to lock the brand selector when only one brand is available, and only shows active models in that flow.
+
+## Still open
 - Seed (or let managers add) versions + colours + year/price for the active models, so proposals can pick a real configuration.
+- Inactive models are still visible in the generic proposal vehicle-picker outside the new-client flow; only the new-client flow filters to active models.
 
 ## Filtering by the user's brands
 Vehicle lists and the proposal vehicle-picker must respect the user's selected brands — see [[USER-BRANDS]].

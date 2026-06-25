@@ -181,13 +181,18 @@
   },
   "active": "c0ad40a03ae4b6a0",
   "lastOpenFiles": [
+    "OnTimeCRM.md",
+    "01-FEATURES/ROADMAP.md",
+    "01-FEATURES/PAYMENTS.md",
+    "00-PROJECT/SECURITY.md",
+    "01-FEATURES/VEHICLES.md",
+    "03-SESSIONS/2026-06-24-frontend-regression-fix.md",
     "00-PROJECT/LOCAL-AI-SETUP.md.tmp.19460.efb56a78565c",
     "00-PROJECT/LOCAL-AI-SETUP.md.tmp.19460.e055436fc496",
     "03-SESSIONS/2026-05-30-21_00-project-review.md",
     "01-FEATURES/AI-WORKFLOW.md",
     "Untitled.base",
     "00-PROJECT/ARCHITECTURE.md.tmp.19460.0a396cfcef4f",
-    "OnTimeCRM.md",
     "2026-05-30.md",
     "00-PROJECT/ARCHITECTURE.md.tmp.19460.ff83691e8bf9",
     "00-PROJECT/ARCHITECTURE.md.tmp.19460.c62c2b7b65a8",
@@ -195,7 +200,6 @@
     "04-DECISIONS/2026-05-30-access-scope-helper.md.tmp.19460.ba9cabd1cad6",
     "01-FEATURES/AI-TASK-PLAN.md.tmp.19460.58b35391b1b1",
     "00-PROJECT/LOCAL-AI-SETUP.md.tmp.19460.120297a0630d",
-    "03-SESSIONS/2026-05-30-21_00-project-review.md.tmp.19460.c61cfa425379",
     "04-DECISIONS/2026-05-30-access-scope-helper.md",
     "02-DATABASE/API-REFERENCE.md",
     "01-FEATURES/NOTIFICATIONS.md",
@@ -212,10 +216,6 @@
     "00-PROJECT/CONVENTIONS.md",
     "00-PROJECT/HOW-TO-USE.md",
     "00-PROJECT/KNOWN-ISSUES.md",
-    "00-PROJECT/STATUS.md",
-    "00-PROJECT/SECURITY.md",
-    "00-PROJECT/ARCHITECTURE.md",
-    "02-DATABASE/DASHBOARD.md",
-    "00-PROJECT/BEFORE-DEPLOY.md"
+    "00-PROJECT/STATUS.md"
   ]
 }

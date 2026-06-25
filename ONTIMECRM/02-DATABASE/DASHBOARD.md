@@ -29,7 +29,7 @@ OverdueNotificationsCount  int
 Notes:
 - "This month" uses `DATE_TRUNC('month', NOW() AT TIME ZONE 'UTC')`.
 - KPIs are scoped to the JWT user. Managers can view a salesperson's dashboard via `GET /api/users/{id}/dashboard` (🔒).
-- ConversionRate = sales / proposals × 100 (computed in service/SQL).
+- ConversionRate = sales / proposals × 100 (computed in service/SQL and already returned as percentage points; frontend should only append `%`).
 
 ## Frontend
 `DashboardPage.tsx` (lazy). Shows today + overdue notifications (see [[NOTIFICATIONS]]), KPI cards, monthly chart, loss-reason chart, hot/warm/cold lists. Charts via `@ant-design/charts`.
