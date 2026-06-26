@@ -2,9 +2,11 @@
 
 Hub: [[OnTimeCRM]] · Roadmap: [[ROADMAP]].
 
-**Only genuine deploy-gating infra/config lives here** — things that must be right to ship to Render/Vercel/Supabase, regardless of feature work.
+**Only genuine deploy-gating infra/config lives here** — things that must be right to ship to Render/Vercel/Neon, regardless of feature work.
 
 > Bugs and tech debt are NOT here — they're normal development, done well before deploy is considered. See [[KNOWN-ISSUES]]. All of those should already be resolved by the time this checklist matters.
+
+> **2026-06-26: a demo deploy exists** (see [[2026-06-26-deploy-and-fixes]]) but deliberately does **not** satisfy this checklist — it uses a weak `AdminBootstrap` password and free-tier everything. Don't treat the demo's existence as this checklist being done.
 
 ## Infra / data
 - [ ] **Migration strategy** — there are no EF migrations; `EnsureCreated` + auto drop+recreate **wipes data on schema drift**. Fine for a local/throwaway DB; production needs real migrations or an accepted reset policy. See [[ARCHITECTURE]].

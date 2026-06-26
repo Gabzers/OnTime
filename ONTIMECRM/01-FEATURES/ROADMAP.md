@@ -60,6 +60,14 @@ architecture decision below, not missing/broken translations.
 - [ ] PWA + browser push notifications
 - [ ] Monthly report export (PDF)
 - [ ] UX adjustments from real feedback
+- [ ] **Configurable lead-temperature rules.** Today `DealTemperature` (Hot/Warm/Cold) is fully
+      automatic and hardcoded in `ClientService.RecalcTemperature` (≤72h since last interaction =
+      Hot, ≤240h = Warm, else Cold) — recalculated only on `UpdateStageAsync`, which sets
+      `LastInteractionAt = UtcNow` in the same call, so a stage change always snaps the client back
+      to Hot. There is no manual override anywhere — a salesperson who personally judges a lead as
+      not promising has no way to mark it Cold themselves. Needs: a settings screen (per-user or
+      per-company thresholds) backed by a new rules table, plus a manual override field that wins
+      over the automatic calculation until the next stage change.
 
 ## Phase 5 — V1.2+ (future)
 - [ ] Multi-stand / groups (manager dashboard per stand)

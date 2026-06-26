@@ -2,7 +2,7 @@
 
 Hub: [[OnTimeCRM]] · Work order: [[ROADMAP]].
 
-Last verified against source: 2026-06-25 (i18n/EN-locale overhaul + cross-tenant admin-panel security fix + error-log persistence + Supabase query audit + sidebar rebuild — see [[2026-06-25-i18n-security-tests-errorlog]])
+Last verified against source: 2026-06-26 (first free deploy: Render + Vercel + Neon — see [[2026-06-26-deploy-and-fixes]])
 
 ## Backend — implemented & wired (controller + service + stored functions)
 - [x] Clean architecture (Domain / Application / Infrastructure / API)
@@ -63,6 +63,10 @@ Last verified against source: 2026-06-25 (i18n/EN-locale overhaul + cross-tenant
 - [x] **Error log table** (2026-06-25, see [[SECURITY]]) — `ErrorLog` entity + `ErrorHandlingMiddleware` persists every error response (4xx/409/500) to `error_logs`; `GET /api/admin/error-logs` (`AdminOnly`, paginated) to read them.
 - [x] **Supabase query-performance audit** (2026-06-25) — drift detector extended to also catch missing **indexes** (it previously only checked tables/columns, so a new `HasIndex(...)` on an already-deployed entity silently never reached the DB); fixed `SaleRepository`'s date filter using `SoldAt.Year`/`.Month` (can't use an index) → range comparison + new index. Two lower-priority findings left open in [[KNOWN-ISSUES]] (dashboard's 4 round-trips, `SearchUsersAsync`'s double query).
 - [x] **Test-quality audit** (2026-06-25, see [[KNOWN-ISSUES]]) — found the friend-request email/name-swap bug (above) was hidden by tests asserting only HTTP status codes, never response body content. Broader audit of "cross-tenant" suspects found the code was already correctly protected everywhere except the Admin panel — added missing regression tests for Goals/Notifications/Stages ownership boundaries.
+- [x] **First public deploy** (2026-06-26, see [[2026-06-26-deploy-and-fixes]]) — Render (API, Frankfurt, free) + Vercel (frontend) + Neon (Postgres, Frankfurt, free; replaced Supabase after persistent cross-region Npgsql/Supavisor timeouts). Live at the Render `/health` endpoint and the Vercel URL.
+- [x] **Vercel SPA 404 on direct route refresh** (2026-06-26) — `OnTimeCRM_Frontend/vercel.json` was missing entirely, so any direct navigation to a client-side route (e.g. `/dashboard`) 404'd instead of falling through to `index.html`. Added a catch-all rewrite.
+- [x] **VehicleProposalTable: single-color auto-fill** (2026-06-26) — when a version has exactly one external/internal color option, the color `Select` now auto-fills and disables, mirroring the existing single-brand lock pattern. New Proposal modal widened 720px → 1040px (table columns were cramped).
+- [x] **New "Como Funciona" / How It Works page** (2026-06-26) — `HelpPage.tsx`, route `/help`, sidebar entry under Configuração. Static visual walkthrough (AntD `Steps`) of the 5 main flows: Pipeline de Clientes, Propostas, Vendas, Objetivos, Amigos. New i18n keys `PAGE.HELP.*`/`NAV.HELP` in both locales + fallback.
 
 ## Backend — known bugs / debt
 Catalogued in [[KNOWN-ISSUES]] (dev work, not deploy-gating). Highlights: trial lockout (PendingActivation blocks even GET), dual data layer (~43 dead/drifted `fn_*` vs C# services — see [[2026-05-30-data-layer]]), hardcoded i18n.
