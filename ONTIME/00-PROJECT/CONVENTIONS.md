@@ -114,6 +114,51 @@ given context, lock it.
 
 ---
 
+## Configured-only vehicle selection (apply app-wide, 2026-06-27)
+
+**Rule:** a vehicle model that isn't "configured" (`IsConfigured=false` — no version with at least
+one exterior colour) must never be selectable in a proposal/sale vehicle picker, even if it's
+otherwise active. A model without any version can't actually be sold.
+
+**Why:** the status dot system (grey/red/green on the Vehicles screen) already encodes this, but
+it was only ever a visual hint — nothing stopped a salesperson from picking a half-configured
+model in a proposal and getting stuck later with no version/colour to attach to the sale.
+
+**Pattern:** in `ModelSelect` (`VehicleProposalTable.tsx`), always filter `m.isConfigured` before
+the optional `activeOnly` filter — configured-only is unconditional, active-only is a separate,
+narrower restriction used only by the new-client flow.
+
+**Extended 2026-06-29 — `VehiclesPage` management screen itself.** The same "not configured =
+not really usable" logic now also drives the management list, not just the proposal picker:
+`VehicleSearchParams.Configured` (`bool?`) filters `GetModelsAsync`'s query server-side. The
+`VehiclesPage` filter `Select` ("Configurados" / "Não Configurados" / "Todas") **defaults to
+`true`** on first load — a salesperson opening Veículos sees only sellable models first, not a
+list cluttered with half-set-up clones. Switching to "Todas"/"Não Configurados" is one click away
+for whoever actually needs to finish configuring something.
+
+---
+
+## Tables must have search + sort (apply app-wide, 2026-06-27)
+
+**Rule:** every table backed by a resource list that can realistically grow past a screenful
+(clients, proposals, sales, vehicle models/brands, admin companies/users/brands-per-company, etc.)
+must have both a search box and sortable columns. Don't add either one-off — if you're building or
+touching a table, check both boxes.
+
+**Exception:** small, business-bounded lists that can't meaningfully grow (a company's pipeline
+stages, a user's goals, the fixed permission-routes table, the dashboard's hot-deals widget) don't
+need search/sort — adding it there is noise, not a feature.
+
+**Why:** several admin/catalog tables (Admin panel companies/users/brands sub-tables, Vehicles
+models tab, Brands page) were built without one or the other as the app grew. The user wants this
+as a standing rule going forward, not a per-table judgment call.
+
+**Pattern to copy:** see `ClientsPage`/`ProposalsPage`/`SalesPage` via `ResourcePage` —
+`searchValue`/`onSearchChange` wired to a backend `search` query param, plus `sorter` on the
+relevant columns (client-side `Array.prototype.sort` is fine for tables without server pagination).
+
+---
+
 ## Docs Maintenance Rule
 
 **This vault is the source of truth. Code follows the docs, not the reverse.**

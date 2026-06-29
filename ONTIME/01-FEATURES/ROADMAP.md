@@ -22,57 +22,132 @@ infra in [[BEFORE-DEPLOY]].
 
 ---
 
-## Phase 1 — Close MVP gaps (NOW)
+## Phase 1 — Close MVP gaps (NOW) — **Sprint 1**
 
 - [x] **F1 — User Brands filter** ✅ 2026-06-06. See [[USER-BRANDS]].
-- [ ] **Email verification** flow (post-registration). See [[SCHEMA-AUTH]].
+- [ ] **Email verification** flow (post-registration). See [[SCHEMA-AUTH]]. **Deliberately last in
+      Sprint 1** (2026-06-27, user's call) — do every other Sprint 1 item before this one.
 - [x] Audit the implemented Goals/Friends/Permissions pages end-to-end ✅ 2026-06-25 (full Chrome sweep + test-quality audit — see [[STATUS]]). Found and fixed: Goals date-window bug, Friends email/name-swap bug, the cross-tenant Admin-panel authz hole. See [[GOALS-PERMISSIONS]], [[FRIENDS]], [[SECURITY]].
 - [ ] Confirm dashboard performance target (<500ms). See [[DASHBOARD]].
 - [ ] Data-layer reconciliation (dead/drifted `fn_*` functions). See [[2026-05-30-data-layer]].
 
 ---
 
-## Phase 1.5 — UX & admin polish (2026-06-26 backlog)
+## Phase 1.5 — UX & admin polish (2026-06-26 backlog) — **Sprint 1**
 
-User-requested batch, clarified via `/grill-me` before being recorded here — none of these are implemented yet.
+User-requested batch, clarified via `/grill-me` before being recorded here. **Email verification
+moved to the end of the sprint** at the user's request (2026-06-27) — do it last, not first.
 
-- [ ] **Goals page + home screen visual redesign.** Make `/goals` and the pinned-goals widget on the
-      home screen more visually engaging/motivating (progress feels like an achievement, not a
-      table row). No functional change, pure UX/visual.
-- [ ] **Optional "already has a proposal" checkbox on client creation.** Today client creation
-      always atomically creates ≥1 `Proposal` (see [[DOMAIN]] — "Always has ≥1 Proposal"). Add a
-      checkbox so the salesperson can create a client with **zero** proposals; if unchecked, the
-      client has no proposal until one is created later from the Propostas screen. This changes a
-      core domain invariant — `ClientService.CreateAsync` and any code assuming `client.Proposals`
-      is non-empty needs auditing, not just the frontend form.
-- [ ] **Lead Source maintenance screen.** `LeadSource` is currently a fixed backend enum (see
-      [[DOMAIN]]) — add a real CRUD screen (like Marcas/Filiais) so it becomes user-configurable
-      data instead of a hardcoded list.
-- [ ] **"Not an automotive account" profile toggle.** Hides vehicle-related UI (Veículos page,
-      vehicle picker in proposals) for non-automotive tenants — **UI-hide only for now**, no data
-      model change. Explicitly scoped narrow: if this validates well, a more generic "product"
-      model (replacing "vehicle") is a separate future decision, not part of this.
-- [ ] **Admin panel: fix broken expanded-row layout.** Expanding a company/brand row in
-      `/admin` renders a cramped, overflowing horizontal-scroll table overlapping the row above it
-      (see screenshot in session — needs its own card/spacing, not a squeezed inline table).
-- [ ] **Profile: let a user edit their own email + personal data.** Currently presumably locked
-      after registration — needs a `PUT /api/users/me` (or extend the existing one) covering
-      email/name, plus checking whether changing email needs re-verification once email
-      verification (Phase 1, still open) exists.
-- [ ] **Admin panel: change a user's role; registration always defaults to lowest access.**
-      Scope clarified via `/grill-me`: **only the platform Admin** (role=2, cross-tenant) can
-      change a user's role (Salesperson/Manager/Admin) — this is not a per-company Manager
-      capability, and the existing per-role Access Control screen (see [[GOALS-PERMISSIONS]]) is
-      *not* being replaced or extended to per-user overrides. Two parts: (1) confirm/enforce that
-      registration always creates a Salesperson (role=0), never anything higher — audit
-      `AuthService`/registration endpoints for this; (2) the user's own Profile page should clearly
-      show their current role so they always know what kind of account they have. Security note:
-      this is the same category of code as the cross-tenant Admin-panel bug fixed 2026-06-25 (see
-      [[SECURITY]]) — role changes must stay behind the `AdminOnly` policy, never `ManagerOnly`.
-- [ ] **Optional license-plate (matrícula) field per vehicle row.** Add to the vehicle-row level
-      (the same `VehicleProposalTable` row used by both proposal creation and convert-to-sale, per
-      `/grill-me` clarification — a vehicle may already have a plate if used/pre-registered, or
-      none if genuinely new) — optional, free text.
+- [x] **Goals page + home screen visual redesign.** ✅ 2026-06-29 — new shared `GoalCard.tsx`
+      component (used by both `/goals` and the Dashboard's pinned-goals widget): gradient backdrop
+      tinted by the metric's color, a circular progress ring (`Progress type="circle"`) instead of
+      a flat bar, a motivational tag that escalates with progress (`utils/goalHelpers.ts`'s
+      `motivationKey` — "Vamos a isso!" → "A ganhar tração!" → "Bom ritmo!" → "Quase lá!" →
+      "Objetivo atingido!"), a gold trophy ring + border glow once a goal hits 100%, and a
+      "N dias restantes" countdown computed from the goal's period (`daysLeftInPeriod`). `/goals`
+      also gained a gradient hero header with a one-line subtitle and an achieved-goals counter
+      pill. Fixed a real mistranslation found along the way: `LABEL.GOAL.PINNED` said "★ Início"
+      (literally "Start") instead of "Fixado"/"Pinned". No functional/data change — purely visual.
+      `tsc --noEmit` clean, i18n key parity confirmed (464/464). Verified in browser (dark mode):
+      both the `/goals` grid and the Dashboard's compact widget render the new card correctly.
+- [ ] **Daily digest — still to build (flagged 2026-06-29).** `NotificationPreference.DigestEnabled`/
+      `DailyDigestTime`/`DigestFrequencyDays` already exist in the data model and are editable from
+      `ProfilePage` ("Resumo diário ativo"), but **nothing reads them yet** — there is no background
+      job/scheduler anywhere in the backend (confirmed: zero `BackgroundService`/`IHostedService`/cron
+      in the codebase) that actually sends a digest. Today the toggle is a no-op. Needs: a spec pass
+      (exact content — likely today's pending + overdue notifications, per [[NOTIFICATIONS]] — plus
+      delivery channel: email vs in-app) before implementation. See [[NOTIFICATIONS]] for what
+      already works (`/api/notifications/today`, `/overdue-count`) vs. what doesn't (the digest
+      itself).
+- [x] **Optional "already has a proposal" checkbox on client creation.** ✅ 2026-06-27 — `CreateClientRequest.HasProposal` (default `true`); `NewClientPage` has a "Já fez proposta?" switch that conditionally renders the whole Proposta card. See [[STATUS]].
+- [x] **Lead Source maintenance screen.** ✅ 2026-06-29 — new `LeadSourceOption` entity
+      (`CompanyId`, `Code`, `Name`), company-scoped. `Client.LeadSource` stays a plain `int`
+      (referencing `LeadSourceOption.Code`, unique per company) — kept deliberately minimal: no
+      change to the SQL paged-list functions (`fn_get_clients_paged` etc.), the filter int param,
+      or `ClientDto`/`ClientListDto` shapes. New `/api/lead-sources` (GET open to any authenticated
+      user of the company; POST/PUT/PATCH `ManagerOnly`), new `LeadSourcesPage.tsx` (CRUD list,
+      mirrors `BrandsPage.tsx`). Every new company is seeded with the original 8 defaults
+      (Stand/Telefone/OLX/Standvirtual/Instagram/Facebook/Referência/Outro, codes 0-7) at
+      registration; Manager/Admin can rename, add, or deactivate (deactivated ones disappear from
+      pickers but historical clients keep their stored code/name). `LeadSourceTag` now renders the
+      resolved option `Name` directly instead of a translated `ENUM.LEAD_SOURCE.*` key — lead
+      sources are free-text per company now, not a fixed translatable set. Also fixed a real
+      pre-existing bug found along the way: `NewClientPage`'s old hardcoded dropdown options array
+      was `[0..6]` and silently excluded "Outro" (code 7).
+- [x] **"Not an automotive account" toggle.** ✅ 2026-06-29 — landed at the **Filial** level
+      (`Brand.IsAutomotive`, default `true`), not a per-user profile setting — consistent with
+      today's Filial-centric vehicle-brand config, configured by Manager/Admin on `BrandsPage`'s
+      edit form ("Vende veículos?" Switch). `LoginResponseDto`/switch-brand response carry it so
+      the frontend has it without an extra round trip. When off: `Sidebar` hides the "Veículos" nav
+      item; `NewClientPage`/`ClientDetailPage`/`ProposalDetailPage` hide the vehicle-picker section
+      entirely; backend also **drops the "≥1 vehicle required" rule** for that Filial's proposals
+      (`ClientService.CreateAsync`/`ProposalService.CreateForClientAsync` check
+      `IUserRepository.IsAutomotiveAsync`) — otherwise a non-automotive tenant could never create a
+      proposal once the picker is hidden. Takes effect on next login/Filial-switch, not live-pushed
+      to an already-open session (same caveat as multi-Filial membership). 5 new tests,
+      179/179 backend green. Verified end-to-end in browser.
+- [x] **Admin panel: fix broken expanded-row layout.** Already done 2026-06-27 — see [[STATUS]]
+      "Admin panel expanded-row layout fixed". This roadmap line was stale; corrected here.
+- [x] **Profile: let a user edit their own email + personal data.** ✅ 2026-06-29 — extended
+      `UpdateUserRequest`/`PUT /api/users/me` with an optional `Email`, guarded by
+      `USER_EMAIL_TAKEN` (409) via `IUserRepository.EmailTakenByAnotherUserAsync`.
+      `ProfilePage`'s personal-data form now fetches `usersApi.getMe()` (previously only read the
+      cached login-time store, which never had `phone` and left it permanently blank) and gained
+      an editable E-mail field. Note: changing email does **not** trigger re-verification — email
+      verification itself is still open (deliberately last in Sprint 1, see Phase 1 above).
+      3 new tests (`ProfileSelfEditFlowTests.cs`), 182/182 green. Verified in browser: phone
+      saved correctly, email round-trips via `/api/users/me`.
+- [x] **Part 1/2 done 2026-06-27 — registration role + Profile display.** Verified in source:
+      `RegisterManagerAsync` always sets `Role = UserRole.Manager`, `RegisterSalespersonAsync`
+      always sets `Role = UserRole.Salesperson` — no code path ever assigns `Admin`, and
+      `AuthFlowTests` already asserts the role on both registration paths (regression-safe).
+      `ProfilePage` now shows the user's own role as a `Tag` next to the page title
+      (`ENUM.USER_ROLE.{role}`).
+- [x] **Part 2/2 done 2026-06-27 — Admin panel: platform Admin can change a user's role.**
+      `PATCH /api/admin/users/{id}/role` + `GET /api/admin/companies/{companyId}/users`, both
+      behind `AdminOnly` (never `ManagerOnly`). Self-protection: `CANNOT_CHANGE_OWN_ROLE` (422) if
+      the acting Admin targets their own account — both backend-enforced and the frontend disables
+      the Select for that row. UI: `AdminPage`'s expanded company row now shows a "Utilizadores"
+      table alongside "Filiais", with an inline role `Select` per user. 3 new tests
+      (`AdminFlowTests`: Manager forbidden, Admin can change others, Admin can't change self).
+- [x] **Optional license-plate (matrícula) field per vehicle row.** ✅ 2026-06-27 — `ProposalVehicle.Plate`
+      end-to-end (entity, DTOs, `VehicleProposalTable` column); convert-to-sale inherits the
+      preferred vehicle's plate when `ConvertToSaleRequest.Plate` isn't explicitly given.
+- [x] **Vehicle catalog redesigned to be per-user, not global-with-filter.** ✅ 2026-06-27 —
+      user-requested mid-session after reviewing how role permissions work. See
+      [[2026-06-27-per-user-vehicle-catalog]] and [[USER-BRANDS]] for the full design
+      (clone-on-select, hide-on-unselect, delete-blocked-if-in-use). `VehiclesController` model
+      CRUD is no longer `ManagerOnly` — every role manages their own catalog now.
+- [x] **Vehicle brands moved to per-Filial config + multi-Filial membership.** ✅ 2026-06-27, same
+      day — see [[2026-06-27-filial-vehicle-brands-and-membership]] and [[USER-BRANDS]]. Planned
+      via `EnterPlanMode` given the size/risk (touches auth claims, tenant isolation). Manager/Admin
+      now configure which car brands a Filial sells (`BrandVehicleBrand`); personal catalog
+      ownership stays per-user, cloning is now lazy. New `UserBrandMembership` lets a user belong
+      to several companies/filiais and switch the active one from the sidebar.
+- [x] **Configured-only vehicle selection.** ✅ 2026-06-27 — a model without at least one version
+      (not "configured"/green) can no longer be picked in a proposal vehicle picker, regardless of
+      its `IsActive` flag. See [[CONVENTIONS]] "Configured-only vehicle selection".
+- [x] **Tables must have search + sort, standardized.** ✅ 2026-06-27 — new app-wide rule in
+      [[CONVENTIONS]]. Applied to `VehiclesPage` (model sort), `AdminPage` (companies/users/brands
+      sub-tables gained search+sort). Removed the now-unneeded client-side search box from the
+      Dashboard's Hot Deals widget (small, curated list — search was noise there).
+- [x] **Manual end-to-end browser verification of the Filial/membership redesign.** ✅ 2026-06-29 —
+      walked every new piece live (brand config save, lazy clone, brand filter, configured-only
+      picker, Filial switcher, isolation between two Filiais, Admin "Atribuir Filial"). Found and
+      fixed a real bug along the way: `MSG.EMPTY_STATE.VEHICLES` missing from both i18n locales.
+- [x] **"Configurado" filter on Veículos, defaults to configured-only.** ✅ 2026-06-29 — see
+      [[VEHICLES]]. New `VehicleSearchParams.Configured`; `VehiclesPage` filter bar gained a
+      Select defaulting to "Configurados" so the management screen itself opens scoped to
+      sellable models, matching the proposal-picker rule above.
+- [x] **Pagination/query-efficiency audit.** ✅ 2026-06-29 — confirmed already correct app-wide
+      (20/page default, 50 server-side cap, `.AsNoTracking()`, count+skip/take). See
+      [[ARCHITECTURE]] "Pagination". No changes needed.
+- [ ] **Configurable lead-temperature states with time-based auto-transitions.** Requested
+      2026-06-27, to be designed via `/grill-me` before implementation — still Sprint 1 per the
+      user's explicit timing, but the interview hadn't been completed yet when this was last
+      updated. Replaces the hardcoded Hot/Warm/Cold in `ClientService.RecalcTemperature` (see
+      Phase 4's existing "Configurable lead-temperature rules" entry below — this supersedes it
+      with an active, in-progress design rather than a future idea).
 
 **Also found while documenting (not requested, flagged proactively):**
 - [x] **Fixed immediately (2026-06-26):** the new Stages-page notification Popover (bell icon, see
@@ -81,13 +156,49 @@ User-requested batch, clarified via `/grill-me` before being recorded here — n
 
 ---
 
-## Phase 2 — Monetization
+## Phase 2 — Monetization — **Sprint 2, deliberately deferred (2026-06-27)**
+
+Everything else in this roadmap (Phase 1/1.5) is Sprint 1. Payments specifically is NOT part of
+Sprint 1 — explicitly held back by the user until the rest of the backlog is done.
 
 - [ ] **Stripe** — checkout + webhook. See [[PAYMENTS]].
 - [ ] **Ifthenpay** — MBWay + Multibanco + callback. See [[PAYMENTS]].
 - [ ] Subscription page wired to real `InitiateAsync` (currently throws `PAYMENT_PENDING`).
 
 → Depends on Phase 0. Unblocks real launch.
+
+---
+
+## Sprint 2/3 — Filial join-request workflow (spec captured 2026-06-29, not started)
+
+**Today:** registering a Manager *always* creates a brand-new Company + Filial — there's no way
+to join an existing one at sign-up. A Filial is mandatory at account creation (the app doesn't
+function without one). Afterwards, switching Filial only works via the existing
+`UserBrandMembership`/`switch-brand` mechanism, and membership itself can only be **granted** by a
+Manager/Admin (`POST /api/brands/{id}/members`, `POST /api/admin/users/{id}/memberships`) — there
+is no self-service way for a user to request to join a Filial they don't already have a grant for.
+Any authenticated/active user can already switch freely between every Filial they have membership
+in — there's no extra restriction today beyond "do you have a membership row."
+
+**Wanted (user's words, 2026-06-29):** at registration, the user must either (a) create their own
+new Filial (stand), same as today, or (b) pick an existing Filial and **send a join request**. The
+account stays restricted — can't use the app — until one of three things happens:
+1. The join request is **accepted** (by that Filial's Manager/Admin).
+2. The user **withdraws/changes** the pending request (e.g. targets a different Filial instead).
+3. The user creates their **own** new Filial instead of waiting.
+
+**Today's partial workaround:** an `Admin` (platform role) can already switch into *any* Filial via
+the existing membership/switch-brand mechanism (no request needed — Admin bypasses
+permission/subscription checks everywhere, per CLAUDE.md rule #6) — everyone else can only get into
+a Filial they were explicitly granted into by that Filial's own Manager, or create a new one.
+
+**Not designed yet** — needs its own spec pass before implementation: a `BrandJoinRequest` entity
+(`UserId`, `BrandId`, `Status: Pending/Accepted/Rejected/Withdrawn`), a "blocked" account state distinct
+from today's `PendingActivation`/subscription gating, a Manager-side inbox to accept/reject incoming
+requests, and a decision on whether a user can have more than one pending request at once (the
+"or change the request" wording suggests no — withdrawing the old one is required before sending a
+new one). Revisit before starting Phase 2 (Monetization) work, since the "does this account even
+have a usable Filial yet" question affects subscription/trial gating too.
 
 ---
 

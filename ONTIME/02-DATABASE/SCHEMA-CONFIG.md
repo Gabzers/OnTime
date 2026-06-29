@@ -5,13 +5,18 @@ Hub: [[OnTime]] · Features: [[GOALS-PERMISSIONS]] · [[I18N]].
 > Note: `translation_entries` (and the proposed `translation_locales`) are currently **unused** — i18n is served from hardcoded dictionaries in `I18nController.cs`. See [[I18N]].
 
 ## vehicle_brands
+Global "shelf" — shared, not per-tenant. No public endpoint creates rows under it directly
+anymore (see [[USER-BRANDS]]); `ManagerOnly` can still create/delete the brand itself.
 | column | type | notes |
 |--------|------|-------|
 | id | UUID PK | |
 | name | TEXT UNIQUE | |
 | logo_url | TEXT nullable | |
 
-## vehicle_models
+## vehicle_models / vehicle_model_versions (global shelf — redesigned 2026-06-27)
+Unchanged shape, but now exist **only as seed/template data** to clone from — no controller
+writes to these anymore. A user's own catalog lives in `user_vehicle_models`/
+`user_vehicle_versions` below; `ProposalVehicle`/`Sale` no longer FK here.
 | column | type | notes |
 |--------|------|-------|
 | id | UUID PK | |
@@ -22,25 +27,43 @@ Hub: [[OnTime]] · Features: [[GOALS-PERMISSIONS]] · [[I18N]].
 | base_price | NUMERIC nullable | |
 | image_url | TEXT nullable | |
 
-## vehicle_model_versions
+`vehicle_model_versions`: `model_id` FK, `name`, `external_colors`/`internal_colors` (serialized
+arrays via `ColorArrayHelper`).
+
+## user_vehicle_models / user_vehicle_versions ✅ done (2026-06-27) — see [[USER-BRANDS]]
+The per-user catalog. Same column shape as `vehicle_models`/`vehicle_model_versions` above, plus:
 | column | type | notes |
 |--------|------|-------|
-| id | UUID PK | |
-| model_id | UUID FK | |
-| name | TEXT NOT NULL | |
-| external_colors | TEXT | serialized array (via `ColorArrayHelper`) |
-| internal_colors | TEXT | serialized array |
+| user_id | UUID FK users | cascade delete |
+| vehicle_brand_id | UUID FK vehicle_brands | cascade delete — which global brand this was cloned from/grouped under |
 
-> Not seeded → empty in the UI until configured. See [[VEHICLES]].
+`ProposalVehicle.ModelId`/`VersionId` and `Sale.ModelId` FK here (Restrict on delete — blocked at
+the app layer first with `VEHICLE_MODEL_IN_USE`, see [[USER-BRANDS]]).
 
-## user_vehicle_brands ✅ done (2026-06-06) — see [[USER-BRANDS]]
+## brand_vehicle_brands ✅ done (2026-06-27, replaces user_vehicle_brands) — see [[USER-BRANDS]]
+| column | type | notes |
+|--------|------|-------|
+| id | UUID PK | own surrogate key (BaseEntity), not composite |
+| brand_id | UUID FK brands | cascade delete — the company's Filial, not the car brand |
+| vehicle_brand_id | UUID FK vehicle_brands | cascade delete |
+| unique index (brand_id, vehicle_brand_id) | | many-to-many: car brands the **Filial** sells, Manager/Admin-managed. Allowing a brand lazily clones it into each user's own catalog the first time they view/create a model for it; disallowing hides (never deletes) it everywhere for that Filial's users. |
+
+## user_brand_memberships ✅ done (2026-06-27) — see [[USER-BRANDS]], [[ARCHITECTURE]]
 | column | type | notes |
 |--------|------|-------|
 | id | UUID PK | own surrogate key (BaseEntity), not composite |
 | user_id | UUID FK users | cascade delete |
-| vehicle_brand_id | UUID FK vehicle_brands | cascade delete |
-| created_at / updated_at / is_active / notes | — | inherited from `BaseEntity` |
-| unique index (user_id, vehicle_brand_id) | | many-to-many: brands the user sells. Empty for a user = no filter = all brands. |
+| brand_id | UUID FK brands | cascade delete |
+| unique index (user_id, brand_id) | | many-to-many: which Filiais a user may switch into via `POST /api/users/me/switch-brand`. `users.company_id`/`brand_id` (and the JWT's `cid`/`bid`) stay the single "currently active" Filial — membership doesn't change that claim shape. |
+
+## lead_source_options ✅ done (2026-06-29) — see [[ROADMAP]]
+| column | type | notes |
+|--------|------|-------|
+| id | UUID PK | own surrogate key (BaseEntity) |
+| company_id | UUID FK companies | restrict delete |
+| code | int | the value stored on `clients.lead_source` — unique per company, not global |
+| name | varchar(100) | free text, Manager/Admin-editable |
+| unique index (company_id, code) | | new companies are seeded with 8 defaults (codes 0-7) at registration matching the old hardcoded enum; Manager/Admin can rename/add/deactivate (`is_active`, inherited from BaseEntity) via `/api/lead-sources`. `clients.lead_source` itself is unchanged (`int`, no FK) — deliberately kept loose to avoid touching the SQL paged-list functions. |
 
 ## user_goals
 | column | type | notes |

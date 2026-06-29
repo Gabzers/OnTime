@@ -10,6 +10,20 @@ Hub: [[OnTime]] · Roadmap: [[ROADMAP]].
 > satisfy this checklist — it uses a weak `AdminBootstrap` password and free-tier everything.
 > Don't treat the demo's existence as this checklist being done.
 
+## Next infra task (before the next deploy round)
+- [ ] **Move backend hosting + DB to Google Cloud + Supabase, keep the current frontend
+  (Vercel)** (noted 2026-06-27, not started). I.e.: backend off Render → Google Cloud (likely
+  Cloud Run, given no background workers exist today — see [[NOTIFICATIONS]] "Future: recurring
+  templates" for why that matters); database off Neon → back to Supabase (was the original choice
+  before a Render↔Supabase cross-region network timeout forced the move to Neon — confirmed via
+  Supabase itself being healthy, just the Render-to-Supabase network path being slow; Google Cloud
+  Run and Supabase may not have the same issue since they could end up in matching regions).
+  Frontend stays on
+  Vercel, unchanged. Needs: a Google Cloud account/project, `gcloud` CLI setup, a new
+  Supabase project (or reuse the one created 2026-06-26 if it still exists), and updated env vars
+  (`Cors__AllowedOrigins__0` stays pointed at the same Vercel URL, only `ConnectionStrings__DefaultConnection`
+  and wherever the API is hosted change).
+
 ## Infra / data
 - [ ] **Migration strategy** — there are no EF migrations; `EnsureCreated` + auto drop+recreate **wipes data on schema drift**. Fine for a local/throwaway DB; production needs real migrations or an accepted reset policy. See [[ARCHITECTURE]].
 - [ ] **Dead `fn_*` cleanup** — the ~43 unused/drifted stored functions are re-applied on every startup. Harmless locally; remove before prod once the data-layer reconciliation in [[KNOWN-ISSUES]] is done.

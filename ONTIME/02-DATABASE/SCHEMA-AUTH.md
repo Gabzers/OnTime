@@ -20,6 +20,7 @@ Hub: [[OnTime]] · Domain: [[DOMAIN]] · Features: [[PAYMENTS]] · [[FRIENDS]].
 | primary_color | TEXT | hex e.g. "#1C69D4" |
 | description, phone, email, address, logo_url | TEXT | nullable |
 | is_active | BOOL DEFAULT TRUE | |
+| is_automotive | BOOL DEFAULT TRUE | ✅ 2026-06-29 — "Not an automotive account" toggle, see [[VEHICLES]]. When false, hides vehicle UI and relaxes the ≥1-vehicle-required rule for this Filial's proposals. |
 
 ## users
 | column | type | notes |

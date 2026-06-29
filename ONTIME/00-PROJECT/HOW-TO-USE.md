@@ -57,6 +57,7 @@ OnTime.md           → 🏠 HUB — entry point, everything links from here
   SECURITY.md          → auth, authz, secrets, hardening backlog
   KNOWN-ISSUES.md      → bug & tech-debt backlog (fix during dev)
   BEFORE-DEPLOY.md     → deploy-gating infra/config only
+  CI-CD-WORKFLOW.md    → branch/PR/CI rules, never push straight to main, merge is manual
   LOCAL-AI-SETUP.md    → Ollama + Continue against repo + vault
   HOW-TO-USE.md        → this file
 

@@ -64,7 +64,11 @@ ProposalStatus:      Active=0  Won=1  Lost=2  Cancelled=3
 BusinessType:        DirectPurchase=0  TradeIn=1  TradeInWithDifference=2  Leasing=3  Financing=4
 PaymentType:         Cash=0  Financing=1  Leasing=2  BankTransfer=3  Other=4
 DealTemperature:     Hot=0  Warm=1  Cold=2
-LeadSource:          WalkIn=0  Phone=1  OLX=2  Standvirtual=3  Instagram=4  Facebook=5  Referral=6  Other=7
+LeadSource:          no longer an enum (2026-06-29) — `Client.LeadSource` (int) now references the calling
+                     company's `LeadSourceOption.Code`. New companies are seeded with these 8 defaults
+                     (same codes 0-7: Stand/Telefone/OLX/Standvirtual/Instagram/Facebook/Referência/Outro)
+                     but Manager/Admin can rename/add/deactivate via `/api/lead-sources` (LeadSourcesPage).
+                     See [[ROADMAP]].
 LossReason:          Price=0  Competition=1  NoDecision=2  FinancingRejected=3  VehicleNotAvailable=4  ClientUnreachable=5  Other=6
 NotificationStatus:  Pending=0  Done=1  Snoozed=2  Ignored=3
 NotificationTrigger: Manual=0  StageChanged=1  SaleClosed=2  ProposalCreated=3  Custom=4

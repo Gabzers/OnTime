@@ -36,6 +36,36 @@ Rule + current reality + rationale all live in [[2026-05-30-data-layer]]. TL;DR:
 
 ---
 
+## Pagination — audited 2026-06-29, confirmed already correct
+Every `*FilterParams`/`VehicleSearchParams` record defaults to `Page=1, PageSize=20`, and every
+repository clamps the incoming value server-side with `Math.Clamp(p.PageSize, 1, 50)` before
+querying — a client cannot request `pageSize=999999` and pull a whole table. Confirmed across
+`ClientRepository`, `ProposalRepository`, `SaleRepository`, `NotificationRepository`,
+`VehicleRepository`. All read-list queries use `.AsNoTracking()` and the standard
+count-then-skip/take pattern (or a `fn_*` stored function for the 7 that use one — see
+[[2026-05-30-data-layer]]). Frontend's `usePagination()` hook defaults to the same 20, matching the
+backend. The handful of genuinely unpaginated reads (vehicle brands, a company's own Filiais,
+pipeline stages, memberships) are all naturally small/scoped lists, not a risk.
+Non-critical follow-up if it ever matters: no composite index on `user_vehicle_models
+(user_id, vehicle_brand_id)` — fine while that table stays small per user.
+
+---
+
+## Tenant scoping — audited 2026-06-29, confirmed already correct
+Every tenant-scoped entity carries only a Guid FK back to `CompanyId`/`BrandId` — directly
+(`LeadSourceOption.CompanyId`, `BrandVehicleBrand.BrandId`) or transitively via `User.CompanyId`/
+`BrandId` (`Client`, `Proposal`, `Sale`, `ClientStage`, ...). **No entity stores a denormalized
+`CompanyName`/`BrandName` string** — renaming a Company (admin) or Brand (`BrandService.UpdateAsync`)
+takes effect everywhere immediately, since every read (including the raw SQL functions in
+`DatabaseFunctions.cs`) JOINs to the canonical `companies`/`brands` tables at query time. The JWT
+itself only ever carries `cid`/`bid` (IDs), never names.
+
+The one place a name is held client-side as a snapshot: `LoginResponseDto.CompanyName`/`BrandName`,
+captured at login/switch-brand time into `authStore` — purely cosmetic (sidebar header), never used
+for scoping or authorization, and refreshes on next login/switch. Intentionally-global,
+not-tenant-scoped tables: `VehicleBrand`/`VehicleModel` (shared catalog "shelf" — per-Filial/per-user
+cloning happens downstream, see [[USER-BRANDS]]), `TranslationEntry` (i18n catalog).
+
 ## Schema management
 **No migrations.** `EnsureCreated` + auto drop+recreate on drift.
 - Never run `dotnet ef migrations add`.
@@ -44,6 +74,13 @@ Rule + current reality + rationale all live in [[2026-05-30-data-layer]]. TL;DR:
 
 ## Auth
 JWT Bearer, `ManagerOnly` policy (role 1 or 2). Full details + hardening backlog in [[SECURITY]]. Roles in [[DOMAIN]].
+
+**Multi-Filial membership (2026-06-27).** A user can belong to several companies/filiais
+(`UserBrandMembership`), but `User.CompanyId`/`BrandId` and the JWT's `cid`/`bid` claims stay
+**singular** — they're the "currently active" Filial. `AccessScope`/`ManagerBrandScope`/
+`RequireBrandId()` are completely unaffected by this — they only ever read the active claim.
+Switching (`POST /api/users/me/switch-brand`) re-mints a fresh JWT scoped to the new Filial, same
+shape as login. See [[USER-BRANDS]] and `04-DECISIONS/2026-06-27-per-user-vehicle-catalog.md`.
 
 ## Error handling
 - Business errors → `throw new ApiException(ApiErrorCatalog.CODE)`.
