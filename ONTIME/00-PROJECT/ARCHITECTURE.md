@@ -32,7 +32,7 @@ Domain ← Application ← Infrastructure ← API
 ---
 
 ## Data layer
-Rule + current reality + rationale all live in [[2026-05-30-data-layer]]. TL;DR: complex/aggregate → `fn_*`; simple CRUD → EF. Today only 7 read `fn_*` are used; ~43 are dead.
+Rule + rationale live in [[2026-06-29-data-layer-migrated-to-csharp]] (supersedes [[2026-05-30-data-layer]]). TL;DR: ALL query/aggregate/write logic lives in C#/EF Core now — no PostgreSQL `fn_*` stored functions remain, `DatabaseFunctions.cs` is deleted, nothing is applied at startup beyond `EnsureCreated` + drift-detect.
 
 ---
 
@@ -42,8 +42,8 @@ repository clamps the incoming value server-side with `Math.Clamp(p.PageSize, 1,
 querying — a client cannot request `pageSize=999999` and pull a whole table. Confirmed across
 `ClientRepository`, `ProposalRepository`, `SaleRepository`, `NotificationRepository`,
 `VehicleRepository`. All read-list queries use `.AsNoTracking()` and the standard
-count-then-skip/take pattern (or a `fn_*` stored function for the 7 that use one — see
-[[2026-05-30-data-layer]]). Frontend's `usePagination()` hook defaults to the same 20, matching the
+count-then-skip/take pattern in C#/EF Core LINQ (see [[2026-06-29-data-layer-migrated-to-csharp]] —
+no SQL stored functions anymore). Frontend's `usePagination()` hook defaults to the same 20, matching the
 backend. The handful of genuinely unpaginated reads (vehicle brands, a company's own Filiais,
 pipeline stages, memberships) are all naturally small/scoped lists, not a risk.
 Non-critical follow-up if it ever matters: no composite index on `user_vehicle_models
@@ -56,9 +56,9 @@ Every tenant-scoped entity carries only a Guid FK back to `CompanyId`/`BrandId` 
 (`LeadSourceOption.CompanyId`, `BrandVehicleBrand.BrandId`) or transitively via `User.CompanyId`/
 `BrandId` (`Client`, `Proposal`, `Sale`, `ClientStage`, ...). **No entity stores a denormalized
 `CompanyName`/`BrandName` string** — renaming a Company (admin) or Brand (`BrandService.UpdateAsync`)
-takes effect everywhere immediately, since every read (including the raw SQL functions in
-`DatabaseFunctions.cs`) JOINs to the canonical `companies`/`brands` tables at query time. The JWT
-itself only ever carries `cid`/`bid` (IDs), never names.
+takes effect everywhere immediately, since every read (all in C#/EF Core LINQ now — see
+[[2026-06-29-data-layer-migrated-to-csharp]]) JOINs to the canonical `companies`/`brands` tables at
+query time. The JWT itself only ever carries `cid`/`bid` (IDs), never names.
 
 The one place a name is held client-side as a snapshot: `LoginResponseDto.CompanyName`/`BrandName`,
 captured at login/switch-brand time into `authStore` — purely cosmetic (sidebar header), never used
@@ -97,6 +97,13 @@ shape as login. See [[USER-BRANDS]] and `04-DECISIONS/2026-06-27-per-user-vehicl
 | Cancelled / Inactive | — | ❌ 403 | ❌ 403 |
 
 Bypass: `/api/auth/*`, `/api/i18n`, `/health`, `/api/subscription/*`, `/api/webhooks/*`. Admins bypass entirely.
+
+**Frontend lockdown for `Expired` (2026-06-29).** The table above already makes `Expired` read-only
+on the backend (GET ok, writes 402) — `ProtectedRoute.tsx` now additionally redirects every route
+*except* `/profile` to `/profile` when `user.accountStatus === 2` and the user isn't Admin, and
+`Sidebar.tsx`'s main nav collapses to empty in that state (Profile stays reachable via the
+user-menu dropdown, which is separate from the main `Menu`). Both checks read `accountStatus`
+straight off the cached `LoginResponseDto` — no extra API call.
 
 ---
 

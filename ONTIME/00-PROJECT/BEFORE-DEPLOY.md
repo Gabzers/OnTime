@@ -26,7 +26,7 @@ Hub: [[OnTime]] · Roadmap: [[ROADMAP]].
 
 ## Infra / data
 - [ ] **Migration strategy** — there are no EF migrations; `EnsureCreated` + auto drop+recreate **wipes data on schema drift**. Fine for a local/throwaway DB; production needs real migrations or an accepted reset policy. See [[ARCHITECTURE]].
-- [ ] **Dead `fn_*` cleanup** — the ~43 unused/drifted stored functions are re-applied on every startup. Harmless locally; remove before prod once the data-layer reconciliation in [[KNOWN-ISSUES]] is done.
+- [x] **Dead `fn_*` cleanup** ✅ 2026-06-29 — `DatabaseFunctions.cs` (56 functions, only 7 used) deleted entirely; all logic now in C#/EF Core. See [[2026-06-29-data-layer-migrated-to-csharp]]. (The unused `OnTime_Backend/sql/functions/*.sql` mirror files, never loaded by the app, are still present — low-priority cleanup, not deploy-gating.)
 
 ## Config / security
 - [ ] CORS falls back to `AllowAnyOrigin()` when `Cors:AllowedOrigins` is empty — set real origins.

@@ -29,7 +29,7 @@ infra in [[BEFORE-DEPLOY]].
       Sprint 1** (2026-06-27, user's call) — do every other Sprint 1 item before this one.
 - [x] Audit the implemented Goals/Friends/Permissions pages end-to-end ✅ 2026-06-25 (full Chrome sweep + test-quality audit — see [[STATUS]]). Found and fixed: Goals date-window bug, Friends email/name-swap bug, the cross-tenant Admin-panel authz hole. See [[GOALS-PERMISSIONS]], [[FRIENDS]], [[SECURITY]].
 - [ ] Confirm dashboard performance target (<500ms). See [[DASHBOARD]].
-- [ ] Data-layer reconciliation (dead/drifted `fn_*` functions). See [[2026-05-30-data-layer]].
+- [x] Data-layer reconciliation — all logic migrated to C#/EF Core, `DatabaseFunctions.cs` retired ✅ 2026-06-29. See [[2026-06-29-data-layer-migrated-to-csharp]].
 
 ---
 
@@ -164,6 +164,14 @@ Sprint 1 — explicitly held back by the user until the rest of the backlog is d
 - [ ] **Stripe** — checkout + webhook. See [[PAYMENTS]].
 - [ ] **Ifthenpay** — MBWay + Multibanco + callback. See [[PAYMENTS]].
 - [ ] Subscription page wired to real `InitiateAsync` (currently throws `PAYMENT_PENDING`).
+- [ ] **Expired-account flow needs a real path forward, not just a message (flagged 2026-06-29).**
+      Right now, an expired user sees "contacte o administrador" on `/profile` and that's the end
+      of it — no in-app way to actually reach an admin, no renewal CTA, no notification to the
+      Manager/Admin that someone on their team is locked out. Once Stripe/Ifthenpay land, this
+      needs: a real "Renew" button on the expired-state message (linking into the same
+      `InitiateAsync` flow), and ideally a notification/email to the company's Manager/Admin when
+      a teammate's subscription expires, so they don't find out from the teammate complaining.
+      Deliberately deferred — noted here so it doesn't get lost.
 
 → Depends on Phase 0. Unblocks real launch.
 
@@ -290,8 +298,8 @@ architecture decision below, not missing/broken translations.
     "Vendas este Mês" on the home screen opens the analytics page already set to Month + Sales) —
     a sharper version of the plain page-navigation wired into the home screen on 2026-06-26.
   - Needs new backend aggregation endpoints (today's `DashboardDto` is a fixed shape for "this
-    month" only) — likely a `fn_*` SQL function per chart given the data-layer split rule for
-    aggregate/multi-table logic (see [[2026-05-30-data-layer]]), not more C# service loops.
+    month" only) — per the current data-layer rule, build these as C#/EF Core LINQ in the
+    repository, same as `SaleRepository.GetDashboardAsync` (see [[2026-06-29-data-layer-migrated-to-csharp]]), not a SQL function.
 - [ ] **Configurable home-screen widgets** (2026-06-27 idea). Today's "Ecrã Inicial" KPI cards are
       a fixed, hardcoded set for every user. The ask: let each salesperson pick which widgets they
       see, up to a cap.

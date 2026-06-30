@@ -35,17 +35,17 @@ If a file is growing, split it before asking the local model for help.
 | DTOs | +Dto / +Request | `ClientDto`, `CreateClientRequest` |
 | Interfaces | I prefix | `IClientService` |
 | Private fields | `_camelCase` | `_repo` |
-| DB functions | `fn_snake_case` | `fn_get_clients_paged` |
+| DB functions | _(retired — see [[2026-06-29-data-layer-migrated-to-csharp]])_ | — |
 
 - **DTOs are C# `record`s.** List DTO = lean (table); detail DTO = full; `*FilterParams` = all-nullable.
 - **Service** delegates to repo, throws `ApiException(ApiErrorCatalog.CODE)` for business errors.
 - **Controller**: `[ApiController] [Authorize]`, inject service only, `User.GetUserId()`, return `Ok(result)`, `CancellationToken` on all actions.
 - **Error codes**: `SCREAMING_SNAKE_CASE` (`CLIENT_NOT_FOUND`, `PROPOSAL_ALREADY_CLOSED`).
 - **JSON**: camelCase, nulls omitted, enums as integers, always paginate (`PagedResult<T>`, default 20, max 50).
-- **Data layer by complexity** (see [[ARCHITECTURE]], [[2026-05-30-data-layer]]): complex/aggregate/multi-table → stored function `fn_*`; simple single-entity CRUD → EF in the service. Never implement the same flow in both.
+- **Data layer — all in C#** (see [[ARCHITECTURE]], [[2026-06-29-data-layer-migrated-to-csharp]]): every query, aggregate, and write lives in C#/EF Core LINQ in repositories/services. No PostgreSQL `fn_*` stored functions — `DatabaseFunctions.cs` was retired 2026-06-29.
 
 ### PostgreSQL naming
-`snake_case` everywhere; tables plural; functions `fn_verb_noun`.
+`snake_case` everywhere; tables plural. No stored functions (see [[2026-06-29-data-layer-migrated-to-csharp]]).
 
 ---
 
@@ -131,10 +131,16 @@ narrower restriction used only by the new-client flow.
 **Extended 2026-06-29 — `VehiclesPage` management screen itself.** The same "not configured =
 not really usable" logic now also drives the management list, not just the proposal picker:
 `VehicleSearchParams.Configured` (`bool?`) filters `GetModelsAsync`'s query server-side. The
-`VehiclesPage` filter `Select` ("Configurados" / "Não Configurados" / "Todas") **defaults to
-`true`** on first load — a salesperson opening Veículos sees only sellable models first, not a
-list cluttered with half-set-up clones. Switching to "Todas"/"Não Configurados" is one click away
-for whoever actually needs to finish configuring something.
+`VehiclesPage` filter `Select` ("Todas" / "Configurados" / "Não Configurados") defaults to
+**`true`** at first, then to **`undefined`/"Todas"** later the same day at the user's request —
+see the bug below.
+
+**Bug fixed 2026-06-29 — "Todas" silently broken.** The filter `Select` used `{ value: undefined,
+label: 'Todas' }` for the "show everything" option — AntD can't render `value={undefined}` as a
+real selected option, so picking "Todas" just showed an empty/stuck control instead of clearing
+the filter. Fixed with a string state sentinel (`'all' | 'true' | 'false'`), converted to
+`boolean | undefined` only at the API-call boundary. Default is now `'all'` (was `true`/
+"Configurados").
 
 ---
 
@@ -173,7 +179,7 @@ Full guidance: [[HOW-TO-USE]].
 
 ## Never do
 - `dotnet ef migrations add` (no migrations)
-- Implement the same flow in both a stored function and a C# service
+- Add a PostgreSQL stored function (`fn_*`) — all logic lives in C#/EF Core now
 - Hardcode Portuguese strings in the frontend
 - Auto-set `SoldAt` to UtcNow
 - Expose `commission` in friend-facing endpoints
