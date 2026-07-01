@@ -43,6 +43,7 @@
 - [[API-REFERENCE]] — every endpoint, grouped by resource
 - [[DASHBOARD]] — KPIs and the queries behind them
 - [[TESTING]] — integration test approach
+- [[QA-TESTING]] — manual regression checklist, flows that have broken before
 - [[FRONTEND-ISSUES]] — concrete known bugs to fix
 
 ### History / memory

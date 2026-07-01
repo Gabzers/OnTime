@@ -19,6 +19,7 @@ Whenever something changes, update the matching note **before closing the sessio
 | Feature done / broken / started | [[STATUS]] + tick [[ROADMAP]] |
 | Architecture decision | `04-DECISIONS/YYYY-MM-DD-topic.md` (copy [[_TEMPLATE]]) |
 | New feature planned | `01-FEATURES/<name>.md` + link from [[ROADMAP]] and the hub |
+| A manually-found bug that a nearby change could re-introduce | add a line to [[QA-TESTING]] |
 
 If code has diverged from a doc, update the doc to reflect reality — never leave them out of sync.
 

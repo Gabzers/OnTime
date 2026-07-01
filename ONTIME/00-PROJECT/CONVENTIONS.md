@@ -181,6 +181,26 @@ one big pass.
 
 ---
 
+## Every destructive action must confirm first — no exceptions (2026-07-02)
+
+**Rule:** any button that deletes, removes, or otherwise irreversibly discards something a user
+created must ask for confirmation before firing — `DeleteWithConfirm`
+(`components/generic/DeleteWithConfirm.tsx`, wraps a `Popconfirm`) is the standard, reused pattern.
+Never wire a delete mutation directly to a button's `onClick`.
+
+**Why this is a standing rule, not a per-button judgment call:** a full app-wide audit
+(2026-07-02) found `VehiclesPage.tsx`'s vehicle-**version** delete (inside a model's Versions
+drawer) fired straight from `onClick`, no confirmation at all — one misplaced tap and a version
+with its color config was gone. Everything else already followed the pattern correctly; this was
+the one gap, but a single silent gap is enough to justify making the rule explicit here instead of
+relying on every future PR remembering to check.
+
+**Exception:** removing a not-yet-saved row from an in-progress form (e.g. a vehicle line in
+`VehicleProposalTable` before the proposal itself is submitted) does **not** need confirmation —
+nothing has been persisted yet, so there's nothing irreversible about it.
+
+---
+
 ## Docs Maintenance Rule
 
 **This vault is the source of truth. Code follows the docs, not the reverse.**

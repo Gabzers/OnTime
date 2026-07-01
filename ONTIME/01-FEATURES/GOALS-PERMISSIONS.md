@@ -8,38 +8,37 @@ Both are **implemented** (controller + service + DB). Status: [[STATUS]].
 
 ## Goals (UserGoal) — implemented
 
-Personal performance targets, not shared. **Progress is computed from the goal's own date
-range** (`UserGoalService.ComputeCurrentValueAsync`, rewritten 2026-06-25) — counts
-sales/proposals/new-clients directly from the DB for `[StartDate, EndDate ?? PeriodEnd)`, never
-a shared "this calendar month" snapshot. This matters: a Daily/Weekly/Annual goal with the old
-implementation always showed the same number as a Monthly one, because every period reused
-`dashboard.SalesThisMonth` etc.
+Personal performance targets, not shared. **`UserGoal` has no `StartDate`/`EndDate` fields at
+all** (removed since this doc was last accurate) — progress is always computed for the
+**current** occurrence of the goal's `Period` (`GoalPeriodCalculator.Window(period, now)`): this
+week/month/year, no fixed dates to pick or drift out of sync with. A Monthly goal always reports
+this calendar month's numbers; a Weekly goal always reports Mon-Sun of the current week; etc.
 
 - `MetricType`: NewClients=0, Sales=1, Proposals=2, ConversionRate=3
-- `Period`: Daily=0, Weekly=1, Monthly=2, **Annual=3** (added 2026-06-25)
-- `TargetValue`, `StartDate`, `EndDate?` (backend-only now — see below), `ShowOnDashboard`
-  (pins the goal's progress bar to the Dashboard home screen; see `DashboardPage.tsx`)
-- **Frontend no longer collects `EndDate` at all** (2026-06-25) — the create/edit form only asks
-  for `StartDate`, defaulted to the start of the chosen `Period` (`startOfPeriod()` in
-  `GoalsPage.tsx`). Previously defaulted to "today", so a Monthly goal created mid-month
-  silently excluded every sale from earlier that month. `EndDate` stays in the API/DB purely as
-  an internal override hook (always null from the UI); `ComputeCurrentValueAsync` falls back to
-  `PeriodEnd(period, start)` whenever it's null, which is now always.
+- `Period`: Daily=0, Weekly=1, Monthly=2, Annual=3
+- `TargetValue`, `ShowOnDashboard` (pins the goal's progress card to the Dashboard home screen),
+  `SortOrder` (manual drag/arrow reorder, also drives Dashboard pinned-goal order)
+- **Every field is editable after creation** (fixed 2026-07-02 — previously `PUT /api/goals/{id}`
+  only accepted `TargetValue`/`ShowOnDashboard`; `MetricType`/`Period` were create-only and the
+  edit form hid those fields entirely, so fixing a typo'd metric meant delete-and-recreate,
+  losing the goal's `SortOrder`/history). `ConversionRate`'s ≤100 cap is now validated against
+  the *new* `MetricType` in the request, not the goal's old one — switching a goal to/from
+  ConversionRate re-evaluates the cap correctly either direction.
 - Delete = soft delete (`IsActive=false`). Ownership enforced (`AUTH_FORBIDDEN` if not owner).
 
-Progress per metric (all scoped to the goal's own window, see above):
+Progress per metric (all scoped to the current period window, see above):
 - Sales → count of `Sale` rows with `SoldAt` in range
 - Proposals → count of `Proposal` rows with `ProposalDate` in range
-- NewClients → count of `Client` rows with `CreatedAt` in range (was, incorrectly, lifetime
-  `dashboard.ActiveClients` before the rewrite)
+- NewClients → count of `Client` rows with `CreatedAt` in range
 - ConversionRate → sales-in-range / proposals-in-range × 100, 0 if no proposals in range
 
 Endpoints (scoped to JWT userId):
 ```
 GET    /api/goals          list with live, period-scoped progress
 POST   /api/goals          create
-PUT    /api/goals/{id}     update target/dates/ShowOnDashboard
+PUT    /api/goals/{id}     update — metric, period, target, and pin flag, all of it
 DELETE /api/goals/{id}     soft delete
+PUT    /api/goals/reorder  bulk SortOrder update from an ordered id list
 ```
 
 ---
