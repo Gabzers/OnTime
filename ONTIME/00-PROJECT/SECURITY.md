@@ -38,7 +38,7 @@ Hub: [[OnTime]] · Architecture: [[ARCHITECTURE]] · Verified against source 202
 - ✅ **Not committed.** `appsettings.Development.json` and `.env` are gitignored and untracked. Base `appsettings.json` ships with empty `Jwt:Key`, connection string, Stripe/Ifthenpay keys, and AdminBootstrap.
 - Prod must supply these via environment/config. See [[BEFORE-DEPLOY]].
 - **AdminBootstrap**: creates a demo admin only if (a) no companies exist AND (b) email+password are configured. Prod base config leaves them empty → skipped. The dev file has `admin@ontimecrm.io / Admin123!` for **local only**.
-- `.env.example` had a real, weak literal (`ADMIN_PASSWORD=teste`) instead of a placeholder like the other secrets — fixed to `REPLACE_WITH_A_STRONG_PASSWORD` (2026-06-25). If anyone ever copies `.env.example` straight into prod env vars without changing this, AdminBootstrap would create a real admin with that password — **verify Render's env vars don't have this value** before going live.
+- `.env.example` had a real, weak literal (`ADMIN_PASSWORD=teste`) instead of a placeholder like the other secrets — fixed to `REPLACE_WITH_A_STRONG_PASSWORD` (2026-06-25). If anyone ever copies `.env.example` straight into prod env vars without changing this, AdminBootstrap would create a real admin with that password — **verify Cloud Run's env vars don't have this value** before going live.
 
 ## Login hygiene
 - Login returns generic `USER_INVALID_CREDENTIALS` for both unknown email and wrong password → no user enumeration. ✅
@@ -64,6 +64,30 @@ trace ID, and the caller's userId if authenticated. `GET /api/admin/error-logs` 
 swallowed (after going through `ILogger`) so they can never replace or mask the real error
 response; the scoped `DbContext`'s change tracker is cleared first so a failed save (e.g. the
 409 case) doesn't get re-attempted alongside the new log row.
+
+## Swagger/API surface audit (2026-07-01, post-Cloud-Run-deploy)
+- [ ] **Swagger/Scalar exposed unconditionally in Production** — `Program.cs` calls
+      `app.UseSwagger()`/`UseSwaggerUI()`/`MapScalarApiReference()` with no
+      `if (app.Environment.IsDevelopment())` gate, so the full API surface (every route, DTO shape,
+      including `/api/internal/run-scheduled-jobs`) is publicly browsable at the live Cloud Run URL.
+      Helps an attacker's reconnaissance for free. Fix: gate behind `IsDevelopment()`, or put it
+      behind its own auth in prod if API docs need to stay reachable for integration work.
+- [ ] **`POST /api/internal/run-scheduled-jobs` has no rate limiting** — guarded only by a shared
+      secret header (`X-Internal-Key`, no `[Authorize]` at all since there's no logged-in user
+      behind a cron call). The secret itself is strong (64 random bytes, stored in Supabase Vault,
+      never in git — see [[BEFORE-DEPLOY]]), but there's no throttling or alerting on repeated wrong
+      guesses the way `/login` has. Low urgency given key strength, but cheap to add for defense in
+      depth once other Sprint 2 hardening lands.
+- [ ] **`POST /api/auth/register` and `/register-manager` have no rate limiting** — only `/login`
+      does today. Allows mass account-creation spam, and (combined with the existing
+      `USER_EMAIL_TAKEN` enumeration tradeoff noted above) makes email-enumeration-at-scale cheaper
+      than it should be. Same `[EnableRateLimiting]` + `RateLimitPartition` pattern as login would
+      close this.
+- [ ] **`GET /api/auth/companies` / `companies/{id}/brands` are `[AllowAnonymous]` and unscoped** —
+      needed for the registration screen's company/Filial picker, but also lets anyone (no login
+      required) enumerate every customer company and Filial name in the system. Low severity
+      (business-directory leak, not personal data), but worth a second look before onboarding
+      competitor-sensitive customers — could require Manager approval only, or paginate/rate-limit.
 
 ## Hardening backlog (dev-time) → [[KNOWN-ISSUES]]
 Consider shorter JWT + refresh token (currently 8h, no revocation) · rate limit `/friends/search`.

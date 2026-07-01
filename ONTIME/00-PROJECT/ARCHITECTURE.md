@@ -119,7 +119,7 @@ Frontend file-size targets are in [[CONVENTIONS]]; context recipes for the local
 ---
 
 ## Deploy
-API → Render.com · Frontend → Vercel · DB → Supabase PostgreSQL
+API → Google Cloud Run (`europe-west1`) · Frontend → Vercel · DB → Supabase PostgreSQL (Session Pooler, port 5432). See [[BEFORE-DEPLOY]] for the migration history and why (Render's free tier had an unreliable network path to Supabase).
 
 ## Local dev
 ```bash

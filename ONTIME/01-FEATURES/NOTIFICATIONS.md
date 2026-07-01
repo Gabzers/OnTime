@@ -133,8 +133,9 @@ is already a new `ClientStageHistory` row, so "fresh series on re-entry" falls o
 approach is lazy/on-demand generation — when notifications are read (`GetTodayAsync`/
 `GetOverdueAsync`), check if the active series is due for its next occurrence and create it then,
 piggybacking on existing read paths instead of standing up new scheduler infrastructure. A real
-background worker is the "proper" fix but is a new infra category for the project, and Render's
-free tier sleeping after 15 min idle complicates an in-process timer anyway.
+background worker is the "proper" fix but is a new infra category for the project; the shipped
+approach instead exposes an internal scheduled-jobs HTTP endpoint (see [[ROADMAP]] #47) meant to be
+triggered by Supabase's built-in `pg_cron`, sidestepping the need for an always-on in-process timer.
 
 **"New Opportunity" (re-engaging an already Won/Lost client) — separate ask, already solved:**
 no backend guard stops moving a client from a final stage back to an active one, and no

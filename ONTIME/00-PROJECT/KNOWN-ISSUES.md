@@ -28,7 +28,7 @@ This is the catalog; [[ROADMAP]] sets the order. Deploy-gating infra is separate
 - [ ] **`FriendshipRepository.SearchUsersAsync` re-queries friendships separately** from the main user search (2 queries where a single join/correlated-subquery would do) — same audit, not yet fixed, low priority (search results are capped at 10 rows).
 - [x] **No CI/CD** — fixed 2026-06-27: GitHub Actions in both repos run `dotnet test`/`npm run build` on every push/PR to `main`. No branch-protection rule yet (merge isn't blocked by a red check) — see [[CI-CD-WORKFLOW]].
 - [ ] **No structured logging** — default `ILogger` only. Add Serilog with at least a request-id enricher before prod.
-- [ ] **No HTTPS redirection / HSTS** in `Program.cs` — fine behind Render's TLS terminator, but explicit middleware is safer.
+- [ ] **No HTTPS redirection / HSTS** in `Program.cs` — fine behind Google Cloud Run's TLS terminator, but explicit middleware is safer.
 - [x] **No request rate limiting** — login fixed 2026-06-25 (see Security hardening below). General/DoS-wide rate limiting still not in place.
 - [ ] **`AppDbContext` implements both `IAppDbContext` and `IUnitOfWork`** — convenient but blurs the seams. Either document the choice or split.
 - [ ] **`ProposalsController` routing is anomalous** — no `[Route]` on the class, full paths on each action. Inconsistent with siblings.

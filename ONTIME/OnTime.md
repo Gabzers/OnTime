@@ -67,7 +67,7 @@
 |-------|------|
 | Backend | .NET 8, ASP.NET Core, EF Core, PostgreSQL |
 | Frontend | React 18, TypeScript, Vite, Ant Design 5, Zustand, TanStack Query |
-| Deploy | Render.com (API) · Vercel (Front) · Supabase (DB) |
+| Deploy | Google Cloud Run (API) · Vercel (Front) · Supabase (DB) |
 | Local AI | Ollama + qwen2.5-coder:14b (implementation) |
 | Planning | Claude (architecture, tests, decisions) |
 

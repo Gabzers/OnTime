@@ -32,6 +32,37 @@ Enums: `PaymentProvider` (Stripe=0, Ifthenpay=1), `PaymentMethodType` (Card=0, M
 - **Ifthenpay Multibanco**: get Entity+Reference+expiry → user pays → callback activates.
 - WireMock stubs already model these calls in tests (`ExternalApiMocks.cs`). See [[TESTING]].
 
+## Security & PCI scope — non-negotiable before Phase 2 ships
+
+**Never let the OnTime backend touch a raw card number, CVV, or expiry date.** Both providers
+support (and Stripe *requires*) tokenization: the card form is Stripe Elements/Ifthenpay's own
+hosted widget, running client-side, which returns a token/PaymentMethod ID — that's the only
+payment credential that ever reaches our API. This keeps OnTime **out of PCI-DSS SAQ-D scope**
+(the expensive, audited tier) and into the much lighter SAQ-A (you never see the card data at
+all). If an implementation PR ever adds a raw `CardNumber`/`Cvv` field to a DTO or entity, that's
+an immediate security regression — reject it.
+
+**What must be encrypted/protected once Stripe/Ifthenpay land:**
+- **Stripe secret key, webhook signing secret, Ifthenpay API keys** — same rule as today's
+  `Jwt:Key`/`Brevo:ApiKey`: never in `appsettings.json`, only via Cloud Run env vars, never
+  committed. See [[SECURITY]] "Secrets".
+- **Webhook signature verification is mandatory, not optional** — both Stripe
+  (`Stripe.EventUtility.ConstructEvent` with the raw request body + signing secret) and Ifthenpay's
+  callback must be verified before trusting the payload and activating a subscription. An
+  unverified webhook endpoint is an open door to "mark my own subscription as Paid" for free.
+- **`SubscriptionPayment` rows may store the provider's transaction/reference ID and amount, never
+  full card data** — a token/last-4-digits display field (e.g. Stripe's `card.last4`) is fine and
+  useful for the user's payment history UI; nothing else card-shaped belongs in our DB.
+- **Webhook endpoints must be idempotent** — a provider retrying the same webhook (network hiccup,
+  timeout on our side) must not double-activate/double-charge-side-effect a subscription. Key on
+  the provider's own event/transaction ID, not just "did this arrive."
+- **TLS everywhere** — already true (Cloud Run terminates TLS, Vercel/Supabase both HTTPS-only by
+  default) — just confirm no HTTP fallback is ever configured once real payment webhooks are wired.
+
+Run `/grill-me` before starting Phase 2 implementation to lock down the exact Stripe/Ifthenpay
+integration shape — this section is the security constraints that any resulting plan must satisfy,
+not a full design.
+
 ## Subscription state machine
 ```
 Register → PendingActivation (trial, TrialEndsAt = now+14d)

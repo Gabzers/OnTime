@@ -140,10 +140,9 @@ moved to the end of the sprint** at the user's request (2026-06-27) — do it la
 - [x] **Pagination/query-efficiency audit.** ✅ 2026-06-29 — confirmed already correct app-wide
       (20/page default, 50 server-side cap, `.AsNoTracking()`, count+skip/take). See
       [[ARCHITECTURE]] "Pagination". No changes needed.
-- [~] **Stage-driven temperature + recurring notifications + pg_cron engine + Brevo email.**
+- [x] **Stage-driven temperature + recurring notifications + pg_cron engine + Brevo email.**
       Scoped via `/grill-me` 2026-06-30 — full spec in
-      [[2026-06-30-stage-driven-temperature-and-notifications]]. Five parts, all Sprint 1 — **4 of
-      5 done, 1 remaining (the pg_cron job itself):**
+      [[2026-06-30-stage-driven-temperature-and-notifications]]. All 5 parts done as of 2026-07-01:
       1. [x] `ClientStage` opt-in temperature program (`AffectsTemperature` + `ClientStageTemperatureRule`
          time-based transitions), replacing the hardcoded "non-final stage → always Hot".
       2. [x] Notification template config already lives in `StageConfigDrawer` (opened from the
@@ -154,12 +153,14 @@ moved to the end of the sprint** at the user's request (2026-06-27) — do it la
       3. [x] Recurring notifications — `IsRecurring`/`RecurrenceIntervalDays`/`FixedDayOfWeek`/
          `FixedDayOfMonth`/`MaxOccurrences` on `StageNotificationTemplate`, `ClientStageNotificationSeries`
          tracks per-stage-visit progress. Pass 2 of the cron (`RunRecurringNotificationsAsync`).
-      4. [ ] **Still pending** — the actual Supabase `pg_cron` job calling
-         `POST /api/internal/run-scheduled-jobs` on a schedule doesn't exist yet. The endpoint
-         itself is built, tested, and callable manually (`X-Internal-Key` header) — just nothing
-         triggers it automatically yet. **Blocking item before this can go live in production** —
-         without it, temperature transitions/recurring notifications/all 3 email types never fire
-         on their own.
+      4. [x] **Supabase `pg_cron` job** (`run-ontime-scheduled-jobs`, jobid 1, `*/15 * * * *`) ✅
+         2026-07-01 — calls `POST /api/internal/run-scheduled-jobs` via `pg_net`, reading the
+         shared secret from Supabase Vault (`ontime_internal_jobs_key`) instead of storing it in
+         plaintext in `cron.job`. Verified end-to-end with a manual `net.http_post` test call:
+         `200 OK`, `{"temperatureTransitions":0,"notificationsGenerated":0,"seriesCompleted":0,
+         "digestEmailsSent":0,"businessSummariesSent":0}` (all zero because nothing was due at
+         that exact moment — confirms the pipeline runs and responds, not yet confirmed against
+         real due data). **Sprint 1 fully closed** — every part of this 5-part item is done.
       5. [x] Brevo email integration — `IEmailSender`/`BrevoEmailSender`, 3 email types (friend
          request, reminder digest, business summary), `User.Locale` for language, full test
          coverage (`FakeEmailSender`). See [[NOTIFICATIONS]] "Email delivery".

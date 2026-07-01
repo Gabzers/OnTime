@@ -34,9 +34,10 @@ how CI gates that.
   PRs, but nothing currently *blocks* a merge if checks are red. Setting one up (Settings →
   Branches → add rule → "Require status checks to pass" → select `build-and-test`) is a manual
   step still to do, one-time, per repo.
-- **Deploy is separate from this CI** and already automatic: Render (backend) and Vercel
-  (frontend) both auto-deploy from `main` on every merge — that's *their* own GitHub integration,
-  not the Actions workflow. The Actions CI is purely a pre-merge gate; it doesn't deploy anything.
+- **Deploy is separate from this CI** and already automatic: Google Cloud Run (backend, via a Cloud
+  Build trigger) and Vercel (frontend) both auto-deploy from `main` on every merge — that's *their*
+  own integration, not the Actions workflow. The Actions CI is purely a pre-merge gate; it doesn't
+  deploy anything. See [[BEFORE-DEPLOY]] for the current stack (migrated off Render+Neon 2026-07-01).
 
 ## Local tooling
 
