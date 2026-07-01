@@ -5,6 +5,40 @@ Hub: [[OnTime]] · Order of work: [[ROADMAP]].
 Bugs and tech debt to fix during **normal development** — long before deploy is even considered.
 This is the catalog; [[ROADMAP]] sets the order. Deploy-gating infra is separate: [[BEFORE-DEPLOY]].
 
+## QA findings 2026-07-02 (full post-deploy pass on live production)
+
+Full sweep requested by the user after the first production deploy: mobile + desktop, dark/light,
+i18n, register→client flow, "Como Funciona" accuracy. Found and fixed:
+
+- [x] **`BrandsPage`/`LeadSourcesPage` mobile cards missing all action buttons** — the mobile card
+      view (`renderMobileCard`, swapped in below 768px) only rendered name + status tag, no Edit
+      or vehicle-brands buttons at all. Copy-paste gap vs `VehiclesPage.tsx`, which did this
+      correctly. Fixed 2026-07-01, confirmed live in production at 375-430px viewport.
+- [x] **Redundant `BottomNav`** — a fixed bottom tab bar on mobile duplicated the hamburger
+      drawer's nav (which already lists everything). Removed entirely 2026-07-01.
+- [x] **"Como Funciona" described the old hardcoded temperature logic only** — the
+      Pipeline/Notifications sections said temperature always recalculates from a fixed 72h/240h
+      rule on every stage change, and didn't mention recurring notification templates or the
+      pg_cron automation at all — both shipped this sprint (see
+      [[../04-DECISIONS/2026-06-30-stage-driven-temperature-and-notifications]]). Fixed 2026-07-02
+      in both `I18nController.cs` (pt-PT + en-US) and `i18nFallback.ts`.
+
+**Verified working, no changes needed:** desktop table view (1920px, no regression from the mobile
+card fix), dark/light mode toggle, i18n key parity (534/534 en-US vs pt-PT, checked live against
+`GET /api/i18n`), end-to-end register→create-Company→create-Stand→create-Client flow on a
+brand-new test account, RLS enabled project-wide on Supabase with zero app impact (app's DB role
+owns every table).
+
+**Not independently re-verified this pass** (deliberately skipped, not a known gap): sending an
+extra test email via the internal cron endpoint — would have required embedding the production
+`InternalJobs:SecretKey` in a browser-executed script, which the session's own safety tooling
+correctly blocked as a credential-exposure risk. The email-send path was already proven for real
+in the previous session (a live Business Summary email was received). Language-switcher UI
+interaction (the antd `Select` in Profile) could not be reliably automated via the browser tool in
+this pass — worth a manual click-through if anyone doubts it; the underlying data path (locale
+saved to `User.Locale`, `/api/i18n?locale=X` serving full parity) is confirmed correct via direct
+API calls.
+
 ## Backend bugs
 - [x] **Trial lockout** — fixed T2 (2026-06-06): `SubscriptionAccessMiddleware` now reads `TrialEndsAt` alongside `AccountStatus`; `PendingActivation + TrialEndsAt > now` is treated as full access.
 - [x] **Admin gets salesperson view on `/api/clients`** — fixed T1 (2026-06-06): `AccessScope.ManagerBrandScope` now uses `IsManagerOrAdmin` (role≥1), so Admin (role=2) correctly gets brand-wide results.
