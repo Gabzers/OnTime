@@ -38,6 +38,10 @@ services:
       AdminBootstrap__FullName: "Administrador"
       AdminBootstrap__CompanyName: "OnTime Demo"
       AdminBootstrap__BrandName: "Stand Demo"
+      InternalJobs__SecretKey: ${INTERNAL_JOBS_SECRET:-dev-internal-jobs-secret}
+      Brevo__ApiKey: ${BREVO_API_KEY:-}
+      Brevo__SenderEmail: ${BREVO_SENDER_EMAIL:-}
+      Brevo__SenderName: "OnTime"
     depends_on:
       postgres:
         condition: service_healthy

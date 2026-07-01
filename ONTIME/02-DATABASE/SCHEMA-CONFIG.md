@@ -56,16 +56,16 @@ the app layer first with `VEHICLE_MODEL_IN_USE`, see [[USER-BRANDS]]).
 | brand_id | UUID FK brands | cascade delete |
 | unique index (user_id, brand_id) | | many-to-many: which Filiais a user may switch into via `POST /api/users/me/switch-brand`. `users.company_id`/`brand_id` (and the JWT's `cid`/`bid`) stay the single "currently active" Filial — membership doesn't change that claim shape. |
 
-## lead_source_options ✅ done (2026-06-29) — see [[ROADMAP]]
+## lead_source_options ✅ updated (2026-06-30, was per-company, now per-user) — see [[ROADMAP]]
 | column | type | notes |
 |--------|------|-------|
 | id | UUID PK | own surrogate key (BaseEntity) |
-| company_id | UUID FK companies | restrict delete |
-| code | int | the value stored on `clients.lead_source` — unique per company, not global |
-| name | varchar(100) | free text, Manager/Admin-editable |
-| unique index (company_id, code) | | new companies are seeded with 8 defaults (codes 0-7) at registration matching the old hardcoded enum; Manager/Admin can rename/add/deactivate (`is_active`, inherited from BaseEntity) via `/api/lead-sources`. `clients.lead_source` itself is unchanged (`int`, no FK) — deliberately kept loose to avoid touching the SQL paged-list functions. |
+| user_id | UUID FK users | cascade delete (changed from `company_id` on 2026-06-30) |
+| code | int | the value stored on `clients.lead_source` — unique per user, not global |
+| name | varchar(100) | free text, editable by any authenticated user for their own list |
+| unique index (user_id, code) | | every new user (Manager or Salesperson) is seeded with 6 defaults (codes 0-5): Stand, Telefone, Instagram, Facebook, Recomendação, Outro at registration. Any authenticated user can manage their own list via `/api/lead-sources` (no ManagerOnly restriction). `clients.lead_source` itself is unchanged (`int`, no FK). |
 
-## user_goals
+## user_goals ✅ updated (2026-06-30, date range removed — period-based rolling window)
 | column | type | notes |
 |--------|------|-------|
 | id | UUID PK | |
@@ -73,9 +73,9 @@ the app layer first with `VEHICLE_MODEL_IN_USE`, see [[USER-BRANDS]]).
 | metric_type | INT | 0=NewClients 1=Sales 2=Proposals 3=ConversionRate |
 | period | INT | 0=Daily 1=Weekly 2=Monthly 3=Annual |
 | target_value | NUMERIC NOT NULL | |
-| start_date, end_date | TIMESTAMPTZ | `end_date` nullable — null means "end of `period`'s own window", computed at read time. Frontend (2026-06-25) no longer collects an explicit end date at all; only `start_date`, defaulted to the start of the chosen `period` (was "today", the root cause of a progress-undercounting bug). |
 | show_on_dashboard | BOOL DEFAULT FALSE | pins the goal to the Dashboard's "Os Meus Objetivos" widget |
 | is_active | BOOL DEFAULT TRUE | soft delete |
+> `start_date`/`end_date` removed on 2026-06-30. Progress is computed against the **current calendar period** derived from `DateTimeOffset.UtcNow` (weeks start Monday). No user-visible date fields remain.|
 
 ## menu_item_permissions
 | column | type | notes |

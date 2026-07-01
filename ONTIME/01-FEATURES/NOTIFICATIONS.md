@@ -51,12 +51,54 @@ PUT   /api/preferences/notifications
 > ⚠️ Frontend bug: the snooze call sends `{ snoozeUntil }` but the API expects `snoozedUntil`. See [[FRONTEND-ISSUES]].
 
 ## Preferences (per user)
-`DailyDigestTime` (09:29), `DigestFrequencyDays` (2), `SaleFollowUpDays` (30), `DigestEnabled`, `StageChangeNotificationsEnabled`, `SaleNotificationsEnabled`, `NewClientNotificationDaysAfter` (2), `NewClientNotificationTime`.
+`DailyDigestTime` (09:29), `DigestFrequencyDays` (2), `SaleFollowUpDays` (30), `DigestEnabled`, `StageChangeNotificationsEnabled`, `SaleNotificationsEnabled`, `NewClientNotificationDaysAfter` (2), `NewClientNotificationTime`, `EmailOnFriendRequests` (default `true`), `EmailOnGeneralNotifications` (default `true`), `LastDigestSentAt` (internal cadence tracking), plus the Business Summary block below. ⚠️ `StageChangeNotificationsEnabled`/`SaleNotificationsEnabled`/`NewClientNotificationDaysAfter` are stored but **never actually gate anything** in the notification-generation code — known dead toggles, not yet wired.
+
+## Email delivery ✅ done (2026-07-01) — Brevo, 3 email types, fully tested
+`IEmailSender` (Application) / `BrevoEmailSender` (Infrastructure) — one JSON POST to
+`https://api.brevo.com/v3/smtp/email` via a typed `HttpClient`, no SDK dependency. Config:
+`Brevo:ApiKey`/`SenderEmail`/`SenderName` (`BREVO_API_KEY`/`BREVO_SENDER_EMAIL` env vars). **Empty
+`Brevo:ApiKey` → skip with a warning log, never throws** — ships fully wired before the user has a
+Brevo account. `User.Locale` (`"pt-PT"`/`"en-US"`, default `pt-PT`, set via `PUT /api/users/me`,
+synced from the Profile language Select) drives which language each email renders in —
+**always the recipient's locale**, not the sender's (verified: sender's own name/text is never
+translated, only the template's fixed copy). `EmailTemplates.cs` holds the bilingual copy for all
+three.
+
+1. **Friend request received** (`FriendshipService`) — instant, gated by `EmailOnFriendRequests`.
+2. **Reminder digest** — Pass 3 in `ScheduledJobsService.RunDigestEmailsAsync`, gated by
+   `DigestEnabled && EmailOnGeneralNotifications`. Lists titles of due Pending `Notification` rows.
+   Cadence via `DigestFrequencyDays` or `DigestDaysOfWeek` bitmask + `DailyDigestTime`.
+3. **Business summary** ✅ done (2026-07-01) — 3rd, independent email, weekly or monthly, about
+   *results* not tasks: new clients / sales / commission counts, active-clients-by-stage snapshot,
+   and all active Goals' live progress (plus the result of a goal's last-finished cycle if one
+   closed inside the reported window — e.g. a Weekly goal reported inside a Monthly summary).
+   Each of the 3 sections is independently toggleable. `BusinessSummaryFrequency` (`SummaryFrequency`
+   enum: Weekly/Monthly) + `BusinessSummaryDayOfWeek` (0=Sun..6=Sat) control delivery: Weekly fires
+   every week on that weekday; Monthly fires on the **first occurrence** of that weekday each month
+   (`now.Day <= 7`). Reported window is always the *previous* full calendar week/month — Pass 4,
+   `RunBusinessSummaryEmailsAsync`. Goal-window math (`GoalPeriodCalculator`, parametrized by
+   `asOf` so it works both for "now" and for a past instant) and per-metric aggregation
+   (`GoalProgressCalculator`) were extracted out of `UserGoalService` to be shared by both.
+
+Frontend: `ProfilePage` has two Cards (reminder digest, business summary) — sub-fields hidden
+unless their own master `Switch` is on; each card title has a `LabelWithHint` "i" tooltip
+explaining what it's for and how it differs from the other. See [[CONVENTIONS]] "Explanatory
+tooltips" — this pattern should be applied more broadly across the app.
+
+**Tests** (`BusinessSummaryFlowTests`, `ScheduledJobsFlowTests`) use a `FakeEmailSender` (in-memory,
+swapped in via DI in `TestWebAppFactory`) to assert on subject/recipient/language without any
+network call — including a same-day double-run test proving Pass 3/4 don't double-send.
 
 ## Dashboard
 Shows today + overdue; `fn_get_overdue_count` feeds the bell badge (polled every 60s). See [[DASHBOARD]].
 
-## Future: recurring templates (design only, not implemented)
+## Recurring templates — pulled into Sprint 1 (2026-06-30)
+
+Was "design only, future"; now in progress. Full updated spec (generation strategy changed to a
+pg_cron job, not lazy-on-read — see below):
+[[2026-06-30-stage-driven-temperature-and-notifications]]. Everything in the section below this
+one (data model, stop conditions, test plan) is still accurate as the binding design — only
+**"Generation strategy"**'s "lazy/on-demand" recommendation is superseded by the pg_cron job.
 
 A stage can already have multiple templates today, and `NotificationSettingsPage.tsx` already
 flattens every stage's templates into individual rows — both verified in code, no change needed.

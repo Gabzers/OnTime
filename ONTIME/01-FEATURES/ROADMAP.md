@@ -25,11 +25,12 @@ infra in [[BEFORE-DEPLOY]].
 ## Phase 1 — Close MVP gaps (NOW) — **Sprint 1**
 
 - [x] **F1 — User Brands filter** ✅ 2026-06-06. See [[USER-BRANDS]].
-- [ ] **Email verification** flow (post-registration). See [[SCHEMA-AUTH]]. **Deliberately last in
-      Sprint 1** (2026-06-27, user's call) — do every other Sprint 1 item before this one.
 - [x] Audit the implemented Goals/Friends/Permissions pages end-to-end ✅ 2026-06-25 (full Chrome sweep + test-quality audit — see [[STATUS]]). Found and fixed: Goals date-window bug, Friends email/name-swap bug, the cross-tenant Admin-panel authz hole. See [[GOALS-PERMISSIONS]], [[FRIENDS]], [[SECURITY]].
-- [ ] Confirm dashboard performance target (<500ms). See [[DASHBOARD]].
 - [x] Data-layer reconciliation — all logic migrated to C#/EF Core, `DatabaseFunctions.cs` retired ✅ 2026-06-29. See [[2026-06-29-data-layer-migrated-to-csharp]].
+
+**Moved to Sprint 2 (2026-06-30, user's call):**
+- Email verification flow (post-registration). See [[SCHEMA-AUTH]].
+- Confirm dashboard performance target (<500ms). See [[DASHBOARD]].
 
 ---
 
@@ -50,30 +51,27 @@ moved to the end of the sprint** at the user's request (2026-06-27) — do it la
       (literally "Start") instead of "Fixado"/"Pinned". No functional/data change — purely visual.
       `tsc --noEmit` clean, i18n key parity confirmed (464/464). Verified in browser (dark mode):
       both the `/goals` grid and the Dashboard's compact widget render the new card correctly.
-- [ ] **Daily digest — still to build (flagged 2026-06-29).** `NotificationPreference.DigestEnabled`/
-      `DailyDigestTime`/`DigestFrequencyDays` already exist in the data model and are editable from
-      `ProfilePage` ("Resumo diário ativo"), but **nothing reads them yet** — there is no background
-      job/scheduler anywhere in the backend (confirmed: zero `BackgroundService`/`IHostedService`/cron
-      in the codebase) that actually sends a digest. Today the toggle is a no-op. Needs: a spec pass
-      (exact content — likely today's pending + overdue notifications, per [[NOTIFICATIONS]] — plus
-      delivery channel: email vs in-app) before implementation. See [[NOTIFICATIONS]] for what
-      already works (`/api/notifications/today`, `/overdue-count`) vs. what doesn't (the digest
-      itself).
+- [x] **Daily digest.** ✅ 2026-07-01 — built as Pass 3 (`ScheduledJobsService.RunDigestEmailsAsync`),
+      driven by `POST /api/internal/run-scheduled-jobs`. Emails the titles of due Pending
+      notifications, respecting `DigestEnabled`/`DailyDigestTime`/`DigestFrequencyDays` or
+      `DigestDaysOfWeek`. See [[NOTIFICATIONS]] "Email delivery".
 - [x] **Optional "already has a proposal" checkbox on client creation.** ✅ 2026-06-27 — `CreateClientRequest.HasProposal` (default `true`); `NewClientPage` has a "Já fez proposta?" switch that conditionally renders the whole Proposta card. See [[STATUS]].
-- [x] **Lead Source maintenance screen.** ✅ 2026-06-29 — new `LeadSourceOption` entity
-      (`CompanyId`, `Code`, `Name`), company-scoped. `Client.LeadSource` stays a plain `int`
-      (referencing `LeadSourceOption.Code`, unique per company) — kept deliberately minimal: no
+- [x] **Lead Source maintenance screen.** ✅ 2026-06-29, moved to per-user 2026-06-30 — new
+      `LeadSourceOption` entity (`UserId`, `Code`, `Name`). `Client.LeadSource` stays a plain `int`
+      (referencing `LeadSourceOption.Code`, unique per user) — kept deliberately minimal: no
       change to the SQL paged-list functions (`fn_get_clients_paged` etc.), the filter int param,
-      or `ClientDto`/`ClientListDto` shapes. New `/api/lead-sources` (GET open to any authenticated
-      user of the company; POST/PUT/PATCH `ManagerOnly`), new `LeadSourcesPage.tsx` (CRUD list,
-      mirrors `BrandsPage.tsx`). Every new company is seeded with the original 8 defaults
-      (Stand/Telefone/OLX/Standvirtual/Instagram/Facebook/Referência/Outro, codes 0-7) at
-      registration; Manager/Admin can rename, add, or deactivate (deactivated ones disappear from
-      pickers but historical clients keep their stored code/name). `LeadSourceTag` now renders the
-      resolved option `Name` directly instead of a translated `ENUM.LEAD_SOURCE.*` key — lead
-      sources are free-text per company now, not a fixed translatable set. Also fixed a real
-      pre-existing bug found along the way: `NewClientPage`'s old hardcoded dropdown options array
-      was `[0..6]` and silently excluded "Outro" (code 7).
+      or `ClientDto`/`ClientListDto` shapes. `/api/lead-sources` (GET/POST/PUT/PATCH all open to any
+      authenticated user, no `ManagerOnly` restriction — it's their own list), `LeadSourcesPage.tsx`
+      (CRUD list, mirrors `BrandsPage.tsx`). Originally shipped 2026-06-29 as company-scoped with 8
+      defaults (Stand/Telefone/OLX/Standvirtual/Instagram/Facebook/Referência/Outro); changed
+      2026-06-30 to per-user with a 6-item default list (Stand/Telefone/Instagram/Facebook/
+      Recomendação/Outro, codes 0-5), seeded at registration for both Manager and Salesperson (and
+      manually backfilled for the pre-existing admin bootstrap user, since `AdminBootstrapAsync`
+      only runs once when no companies exist). `LeadSourceTag` renders the resolved option `Name`
+      directly instead of a translated `ENUM.LEAD_SOURCE.*` key — lead sources are free-text per
+      user now, not a fixed translatable set. Also fixed a real pre-existing bug found along the
+      way: `NewClientPage`'s old hardcoded dropdown options array was `[0..6]` and silently
+      excluded "Outro" (code 7).
 - [x] **"Not an automotive account" toggle.** ✅ 2026-06-29 — landed at the **Filial** level
       (`Brand.IsAutomotive`, default `true`), not a per-user profile setting — consistent with
       today's Filial-centric vehicle-brand config, configured by Manager/Admin on `BrandsPage`'s
@@ -142,12 +140,31 @@ moved to the end of the sprint** at the user's request (2026-06-27) — do it la
 - [x] **Pagination/query-efficiency audit.** ✅ 2026-06-29 — confirmed already correct app-wide
       (20/page default, 50 server-side cap, `.AsNoTracking()`, count+skip/take). See
       [[ARCHITECTURE]] "Pagination". No changes needed.
-- [ ] **Configurable lead-temperature states with time-based auto-transitions.** Requested
-      2026-06-27, to be designed via `/grill-me` before implementation — still Sprint 1 per the
-      user's explicit timing, but the interview hadn't been completed yet when this was last
-      updated. Replaces the hardcoded Hot/Warm/Cold in `ClientService.RecalcTemperature` (see
-      Phase 4's existing "Configurable lead-temperature rules" entry below — this supersedes it
-      with an active, in-progress design rather than a future idea).
+- [~] **Stage-driven temperature + recurring notifications + pg_cron engine + Brevo email.**
+      Scoped via `/grill-me` 2026-06-30 — full spec in
+      [[2026-06-30-stage-driven-temperature-and-notifications]]. Five parts, all Sprint 1 — **4 of
+      5 done, 1 remaining (the pg_cron job itself):**
+      1. [x] `ClientStage` opt-in temperature program (`AffectsTemperature` + `ClientStageTemperatureRule`
+         time-based transitions), replacing the hardcoded "non-final stage → always Hot".
+      2. [x] Notification template config already lives in `StageConfigDrawer` (opened from the
+         Etapas/Pipeline screen's gear icon per stage) — verified live 2026-07-01: a 2-tab drawer,
+         "Regras de Temperatura" + "Notificações", both editable together. The old, unreferenced
+         `NotificationSettingsPage.tsx` (dead — not in any route/nav) was deleted as cleanup; this
+         roadmap line had gone stale, the merge had already happened in an earlier session.
+      3. [x] Recurring notifications — `IsRecurring`/`RecurrenceIntervalDays`/`FixedDayOfWeek`/
+         `FixedDayOfMonth`/`MaxOccurrences` on `StageNotificationTemplate`, `ClientStageNotificationSeries`
+         tracks per-stage-visit progress. Pass 2 of the cron (`RunRecurringNotificationsAsync`).
+      4. [ ] **Still pending** — the actual Supabase `pg_cron` job calling
+         `POST /api/internal/run-scheduled-jobs` on a schedule doesn't exist yet. The endpoint
+         itself is built, tested, and callable manually (`X-Internal-Key` header) — just nothing
+         triggers it automatically yet. **Blocking item before this can go live in production** —
+         without it, temperature transitions/recurring notifications/all 3 email types never fire
+         on their own.
+      5. [x] Brevo email integration — `IEmailSender`/`BrevoEmailSender`, 3 email types (friend
+         request, reminder digest, business summary), `User.Locale` for language, full test
+         coverage (`FakeEmailSender`). See [[NOTIFICATIONS]] "Email delivery".
+      **Confirmed out of scope this round** (Sprint 2/3): email/SMS sent *to the client* + a sent/
+      received communication history screen; email verification (see Phase 1 above).
 
 **Also found while documenting (not requested, flagged proactively):**
 - [x] **Fixed immediately (2026-06-26):** the new Stages-page notification Popover (bell icon, see

@@ -108,7 +108,7 @@ useEffect(() => {
 ```
 
 **Apply this same pattern to any other single-option selector found later** — e.g. a client's
-initial Funil stage if only one is active, a Lead Source picker if a company only configured one,
+initial Pipeline stage if only one is active, a Lead Source picker if a company only configured one,
 etc. Don't wait to be asked again; if you spot a dropdown that can only ever have one option in a
 given context, lock it.
 
@@ -162,6 +162,22 @@ as a standing rule going forward, not a per-table judgment call.
 **Pattern to copy:** see `ClientsPage`/`ProposalsPage`/`SalesPage` via `ResourcePage` —
 `searchValue`/`onSearchChange` wired to a backend `search` query param, plus `sorter` on the
 relevant columns (client-side `Array.prototype.sort` is fine for tables without server pagination).
+
+---
+
+## Explanatory tooltips — pattern introduced 2026-07-01, apply broadly (Sprint 1)
+
+Any toggle/field whose real effect isn't obvious from its label alone (what it actually
+does/doesn't do yet, how it interacts with other settings, non-obvious scope) should get a small
+"i" hover icon next to the label — `<LabelWithHint label={...} hint={...} />` from
+`components/generic/LabelWithHint.tsx`. For a section/card title, wrap it the same way and pass
+the result as `FormSection`'s `title` (accepts `ReactNode`, not just `string`).
+Landed first on `ProfilePage` (reminder digest vs business summary emails) and
+`StageConfigDrawer` (`sendEmail` — doesn't trigger anything yet; `isRecurring` — resets per stage
+visit). **Still needs a pass across the rest of the app** — good remaining candidates: `BrandsPage`
+(`isAutomotive`, membership grants), `AccessControlPage` permission columns, `GoalsPage` period
+picker, `LeadSourcesPage` per-user scoping. Do this incrementally as you touch each page, not as
+one big pass.
 
 ---
 

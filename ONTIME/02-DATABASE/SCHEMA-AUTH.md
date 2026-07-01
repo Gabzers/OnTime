@@ -42,6 +42,7 @@ Hub: [[OnTime]] · Domain: [[DOMAIN]] · Features: [[PAYMENTS]] · [[FRIENDS]].
 | grace_period_days | INT DEFAULT 3 | |
 | stripe_customer_id, stripe_subscription_id | TEXT nullable | |
 | is_active | BOOL DEFAULT TRUE | |
+| locale | TEXT DEFAULT 'pt-PT' | added 2026-07-01 — UI language, kept server-side (not just the frontend's `localStorage`) so backend-sent emails (friend request, digests) are localized. Updated via `PUT /api/users/me`, synced from the Profile language Select. See [[NOTIFICATIONS]]. |
 
 ## user_subscription_payments
 | column | type | notes |

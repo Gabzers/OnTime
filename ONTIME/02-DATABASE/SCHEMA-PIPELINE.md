@@ -112,6 +112,16 @@ Hub: [[OnTime]] · Domain: [[DOMAIN]] · Core feature: [[NOTIFICATIONS]].
 | stage_change_notifications_enabled | BOOL DEFAULT TRUE | |
 | sale_notifications_enabled | BOOL DEFAULT TRUE | |
 | new_client_notification_days_after | INT | sentinel column for drift detection |
+| email_on_friend_requests | BOOL DEFAULT TRUE | added 2026-07-01 — see [[NOTIFICATIONS]] Email delivery |
+| email_on_general_notifications | BOOL DEFAULT TRUE | added 2026-07-01 — gates the digest email pass |
+| last_digest_sent_at | TIMESTAMPTZ nullable | added 2026-07-01 — internal cadence tracking for the digest email job, not user-editable |
+| business_summary_enabled | BOOL DEFAULT TRUE | added 2026-07-01 — 3rd, separate email (weekly/monthly business performance), see [[NOTIFICATIONS]] |
+| business_summary_frequency | INT DEFAULT 0 | `SummaryFrequency`: 0=Weekly 1=Monthly |
+| business_summary_day_of_week | INT DEFAULT 1 (Monday) | 0=Sunday..6=Saturday. Weekly: delivery day every week. Monthly: delivered on the first occurrence of this weekday each month |
+| business_summary_include_counts | BOOL DEFAULT TRUE | new clients / sales / commission counts section |
+| business_summary_include_stage_summary | BOOL DEFAULT TRUE | active-clients-grouped-by-stage section |
+| business_summary_include_goals | BOOL DEFAULT TRUE | all active goals' live progress + last-finished-cycle result, if any closed within the reported window |
+| last_business_summary_sent_at | TIMESTAMPTZ nullable | internal cadence tracking, not user-editable |
 
 ---
 
